@@ -43,6 +43,13 @@ description: project-knowledge/ のAI向けナレッジを、project-knowledge-p
 - `docs/index.md` と、1つ以上の個別Markdownファイルを作る
 - `docs/index.md` から全個別ファイルへ相対リンクで辿れるようにする
 
+Markdownファイルを `docs/` に配置した後、Markdown文書を指すローカルリンクのURLをBlumeで処理可能なルートURLへ置き換える。リンク文字列、クエリ、フラグメントは維持し、リンク先のパス部分の末尾にある `.md` または `.mdx` を `/` に変換する。外部URL、画像、文書以外のローカルファイルは変更しない。
+
+```markdown
+[System](system.md) -> [System](system/)
+[API](guides/api.md#認証) -> [API](guides/api/#認証)
+```
+
 HTML用の出力構成だけは、元スキルの出力先を次の `docs/` に読み替える。別のMarkdown公開フォルダを追加で作らない。
 
 # 出力先
@@ -72,13 +79,15 @@ project-knowledge-published-html-YYYYMMDD-HHmmss/
 
 # Blumeサイトの構築
 
-1. 出力フォルダのルートに、`private: true`、`build: blume build` スクリプトを持つ最小限の `package.json` を作る。
-2. `blume.config.ts` を作り、`content.root` を `docs` に設定する。サイトタイトルと説明には、`docs/index.md` の文書タイトルと対象範囲を使用する。
-3. 出力フォルダで `npm install --save-exact blume@latest` を実行する。実際に解決したバージョンを `package.json` と `package-lock.json` に残す。
-4. `npm run build` を実行する。既定のstrict動作を維持し、`--no-strict` は使用しない。
-5. `npm exec blume validate` を実行し、内部リンクとアセットを検証する。
-6. `dist/index.html` が存在し、`docs/index.md` からリンクした各ページに対応するHTMLが `dist/` へ生成されていることを確認する。
-7. 検証成功後、今回作成した出力フォルダ直下の `node_modules/` と `.blume/` だけを削除する。削除前に対象が今回の出力フォルダ内であることを確認する。
+1. このスキルの `references/template/` の内容を、隠しファイルを含めて出力フォルダのルートへすべてコピーする。`npx blume init` は使用せず、必ずこのテンプレートBlumeプロジェクトを構築のベースにする。
+2. テンプレートの構成と設定を引き継ぎ、サンプル文書を生成した `docs/index.md` と個別Markdownファイルに置き換える。
+3. `blume.config.ts` を更新し、`content.root` を `docs` に設定する。サイトタイトルと説明には、`docs/index.md` の文書タイトルと対象範囲を使用する。
+4. Markdown文書を指すローカルリンクのURLを、前述の規則に従ってBlumeで処理可能なルートURLへ置き換える。
+5. 出力フォルダで `npm install --save-exact blume@latest` を実行する。実際に解決したバージョンを `package.json` と `package-lock.json` に残す。
+6. `npm run build` を実行する。既定のstrict動作を維持し、`--no-strict` は使用しない。
+7. `npm exec blume validate` を実行し、内部リンクとアセットを検証する。
+8. `dist/index.html` が存在し、`docs/index.md` からリンクした各ページに対応するHTMLが `dist/` へ生成されていることを確認する。
+9. 検証成功後、今回作成した出力フォルダ直下の `node_modules/` と `.blume/` だけを削除する。削除前に対象が今回の出力フォルダ内であることを確認する。
 
 npmパッケージの取得、Blumeのビルド、リンク検証のいずれかが失敗した場合は処理を中断する。失敗した工程、エラーの要点、残っている出力フォルダを示し、HTML出力が完了したとは報告しない。
 
@@ -90,6 +99,7 @@ npmパッケージの取得、Blumeのビルド、リンク検証のいずれか
 - 指定テーマから逸脱していない
 - 元ナレッジにない事実や秘密情報を含まない
 - `docs/index.md` から全個別Markdownファイルへ辿れる
+- Markdown文書を指すローカルリンクがBlumeで処理可能なルートURLへ置き換えられている
 - Blumeのビルドとリンク検証が成功している
 - `dist/index.html` と各個別ページのHTMLが存在する
 - 完成物に `node_modules/` と `.blume/` が残っていない
