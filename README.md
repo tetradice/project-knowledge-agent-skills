@@ -1,10 +1,17 @@
-# agent-skills
+# project-knowledge-agent-skills
 
-公開 MCP サーバーの探索と、プロジェクト固有のナレッジ管理に使用する Agent Skills を管理するリポジトリです。
+AIエージェントにより、ソースコード等をもとにしたプロジェクトナレッジを作成し、更新・保守・出力・参照するためのAgent Skillです。
 
-MCP サーバー探索 CLI の使い方は、[packages/mcp-server-search/README.md](./packages/mcp-server-search/README.md) を参照してください。
+## インストール方法
 
-## project-knowledge の使い方
+[Node.js](https://nodejs.org/ja) がインストールされている状態で、以下を実行し、表示された全スキルを選択してインストールしてください。
+
+```
+% npx skills add https://github.com/tetradice/project-knowledge-agent-skills
+```
+
+
+## 使い方
 
 `project-knowledge` は、プロジェクトナレッジの作成、検証、更新を1つの router Skill で扱います。
 
