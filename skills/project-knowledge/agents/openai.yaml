@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Knowledge"
+  short_description: "プロジェクトナレッジの作成・検証・更新を操作別に実行する"
+  default_prompt: "$project-knowledge を使って、プロジェクトナレッジの作成・検証・更新から依頼に合う操作を実行してください。"
