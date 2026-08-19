@@ -12,7 +12,7 @@ description: project-knowledge/ の新規構築、現在状態との差分検証
 選択した instruction を最後まで読む。
 instruction に従って処理を続ける場合は、共通 reference の [format.md](references/format.md)、[metadata.md](references/metadata.md)、[evidence.md](references/evidence.md) を最後まで読む。
 
-- `init`: ナレッジを新規構築する。[init.md](references/instructions/init.md) に従う。
+- `init`: ナレッジを新規構築し、`AGENTS.md` へ案内を反映する。[init.md](references/instructions/init.md) に従い、指定された時点で [template_AGENTS.md](references/template_AGENTS.md) を読む。
 - `check`: ナレッジと現在状態の差分を、ファイルを変更せず検証する。[check.md](references/instructions/check.md) に従う。
 - `update`: 明示的な依頼に基づいてナレッジを更新する。[update.md](references/instructions/update.md) に従う。
 
