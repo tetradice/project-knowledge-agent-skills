@@ -24,7 +24,7 @@ description: project-knowledge/ の参照、新規構築、現在状態との差
 
 ## init
 
-現在のソースコードと設定から、プロジェクトナレッジを新規構築する。
+現在のソースコード、設定、trusted raw sources などから、プロジェクトナレッジを新規構築する。
 
 代表的な依頼:
 
@@ -36,7 +36,7 @@ description: project-knowledge/ の参照、新規構築、現在状態との差
 
 ## check
 
-既存ナレッジと現在のコード、設定、外部環境との差異を、ファイルを変更せず検証する。
+既存ナレッジと現在のコード、設定、外部環境、trusted raw sources の差異を、ファイルを変更せず検証する。
 
 代表的な依頼:
 
@@ -48,7 +48,7 @@ description: project-knowledge/ の参照、新規構築、現在状態との差
 
 ## update
 
-現在のコード、設定、外部環境へナレッジを同期し、`pending.md` を整理する。
+現在のコード、設定、外部環境、trusted raw sources をもとにナレッジを更新し、`pending.md` を整理する。
 
 代表的な依頼:
 

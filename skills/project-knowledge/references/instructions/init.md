@@ -5,6 +5,10 @@
 1. 現在のプロジェクトのルートを特定する。
 2. ルートの `project-knowledge/index.md` が存在するか確認する。
 3. 存在する場合は、`プロジェクトナレッジがすでに存在しています。` と回答して直ちに中断する。
+4. `index.md` が存在しない場合は、`project-knowledge/references/` の有無を確認する。
+
+`project-knowledge/references/` だけが既に存在していても、`index.md` がなければ初期構築を続ける。
+既存の trusted raw sources は削除、上書き、整形せず、初期構築の情報源として利用する。
 
 この確認より前に、他の reference やテンプレートを読まない。ファイル、Git の状態、外部環境も変更しない。
 
@@ -23,15 +27,18 @@
 
 ## ナレッジの初期構築
 
-現在のソースコードと設定からナレッジを構築する。
+現在のソースコード、設定、Git、必要な外部環境、関連する trusted raw sources からナレッジを構築する。
 
 - `project-knowledge/index.md` が存在しない状態を初期状態として扱う。
 - `format.md`、`metadata.md`、`evidence.md` の規則を適用する。
-- 現在の安定した状態だけを記録する。
+- `project-knowledge/references/` が存在する場合は、ファイル名、ディレクトリ構造、ユーザー依頼、構築対象コンセプトから関連資料を絞り込む。全資料を無条件に全文ロードしない。
+- authority の対象を区別し、現在の安定した実装や環境状態と、信頼済みの要件、制約、設計判断を必要に応じて記録する。
+- 要件と現在実装が異なる場合は、一方へ合わせず両方と不一致の状態を記録する。
 - `project-knowledge/index.md` と `project-knowledge/pending.md` を必ず作成する。
 - システムの理解に必要なコンセプトファイルだけを追加する。
 - 推測、一時状態、作業履歴、秘密情報を記録しない。
 - 作成する各コンセプトへ、実際に参照した情報源、実行 actor、現在の UTC 日時、調査開始時の完全長 SHA を記録する。
+- 参照した trusted raw source は既存の `sources` へ記録し、資料自体は変更しない。
 - コンセプト全体を情報源と照合できた場合だけ `verified` を記録する。
 
 構築または完了確認に失敗した場合は中断し、`AGENTS.md` には触れない。
@@ -50,6 +57,7 @@
 
 - `project-knowledge/index.md` と `project-knowledge/pending.md` が存在する。
 - 作成したナレッジが、読み込んだ共通 reference の規則に従う。
+- 既存の `project-knowledge/references/` と配下の全ファイルが変更されていない。
 - `AGENTS.md` がなかった場合は、内容が `../template_AGENTS.md` と一致する。
 - 既存の `AGENTS.md` があった場合は、実行前の内容をすべて保持し、テンプレートを末尾にだけ追加している。
 
