@@ -34,15 +34,6 @@
 利用先プロジェクトの `project-knowledge/references/` は任意とする。
 このディレクトリには、人間または外部から明示的に与えられ、継続して信頼する **trusted raw sources** を配置する。
 Skill 自身の手順を格納する `skills/project-knowledge/references/` とは別のディレクトリである。
-
-配置例:
-
-- `references/requirements/`: 要件、仕様、業務ルール
-- `references/environment/`: コードから取得できない環境情報
-- `references/external/`: 外部サービス仕様、ベンダー資料
-- `references/decisions/`: 人間が確定した設計方針、設計判断
-
-サブディレクトリは例であり、必須ではない。
 Markdown に限定せず、`.md`、`.txt`、`.json`、`.yaml`、`.yml` など、エージェントが安全にテキストとして解釈できる資料を扱う。
 
 `references/` は生成ナレッジではなく入力となる Raw Source である。

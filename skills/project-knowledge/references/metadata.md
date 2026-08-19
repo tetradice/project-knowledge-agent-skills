@@ -35,7 +35,7 @@ git_base_commit: "<調査開始時点の完全長 40 文字 Git SHA>"
 - 情報源がない場合は、推測で補わず `sources` を省略する。
 
 利用先プロジェクトの `project-knowledge/references/` にある trusted raw source を実際に参照した場合も、独自の provenance 形式は作らず `sources` に記録する。
-`resource` には bundle ルートからの相対パス（例: `references/requirements/authentication.md`）を記録し、必要な場合は内容を安定して指せる `id` を付ける。
+`resource` には bundle ルートからの相対パス（例: `references/authentication.md`）を記録し、必要な場合は内容を安定して指せる `id` を付ける。
 関連しそうという理由だけで、読んでいない資料を記録しない。
 資料に秘密値が含まれていても値は転記せず、パス自体が秘密でない場合に限って `resource` を記録する。
 

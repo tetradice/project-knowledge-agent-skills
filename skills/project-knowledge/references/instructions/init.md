@@ -31,7 +31,7 @@
 
 - `project-knowledge/index.md` が存在しない状態を初期状態として扱う。
 - `format.md`、`metadata.md`、`evidence.md` の規則を適用する。
-- `project-knowledge/references/` が存在する場合は、ファイル名、ディレクトリ構造、ユーザー依頼、構築対象コンセプトから関連資料を絞り込む。全資料を無条件に全文ロードしない。
+- `project-knowledge/references/` が存在する場合は、ファイル名、ユーザー依頼、構築対象コンセプトから関連資料を絞り込む。全資料を無条件に全文ロードしない。
 - authority の対象を区別し、現在の安定した実装や環境状態と、信頼済みの要件、制約、設計判断を必要に応じて記録する。
 - 要件と現在実装が異なる場合は、一方へ合わせず両方と不一致の状態を記録する。
 - `project-knowledge/index.md` と `project-knowledge/pending.md` を必ず作成する。
