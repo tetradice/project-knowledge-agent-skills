@@ -1,4 +1,4 @@
 interface:
-  display_name: "プロジェクトナレッジ"
+  display_name: "Project Knowledge"
   short_description: "プロジェクトナレッジを自然な指示から更新・保守"
   default_prompt: "Use $project-knowledge to update, initialize, query, publish, or verify this project's knowledge base."
