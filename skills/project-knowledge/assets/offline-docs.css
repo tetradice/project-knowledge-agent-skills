@@ -1,0 +1,47 @@
+:root {
+  --pk-font-body: "Segoe UI", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
+  --pk-font-mono: "Cascadia Code", "Cascadia Mono", Consolas, monospace;
+}
+
+body,
+input {
+  font-family: var(--pk-font-body);
+}
+
+code,
+kbd,
+pre {
+  font-family: var(--pk-font-mono);
+}
+
+.md-grid {
+  max-width: 92rem;
+}
+
+.md-content__inner {
+  max-width: 52rem;
+  margin-inline: auto;
+  padding-bottom: 4rem;
+}
+
+.md-typeset {
+  line-height: 1.85;
+}
+
+.md-typeset h2 {
+  margin-top: 2.6rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.md-typeset__table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.md-typeset img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+}
+

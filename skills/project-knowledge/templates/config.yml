@@ -1,0 +1,12 @@
+knowledge:
+  human_readable: false
+learning:
+  mode: opportunistic
+memo:
+  require_approval_for_trust: true
+publish:
+  markdown: true
+  html:
+    enabled: true
+    renderer: material-mkdocs
+    offline: true

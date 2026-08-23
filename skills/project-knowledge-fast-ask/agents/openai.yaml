@@ -1,4 +1,0 @@
-interface:
-  display_name: "Project Knowledge Fast Ask"
-  short_description: "プロジェクトナレッジだけを使って質問へ高速に回答する"
-  default_prompt: "$project-knowledge-fast-ask を使って、プロジェクトナレッジの情報だけをもとに質問へ回答してください。"

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Project Knowledge Publish HTML"
-  short_description: "プロジェクトナレッジをBlume製HTMLサイトとして出力"
-  default_prompt: "Use $project-knowledge-publish-html to publish the project knowledge as a Blume-generated HTML site."
