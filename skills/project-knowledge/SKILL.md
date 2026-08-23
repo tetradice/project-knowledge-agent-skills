@@ -38,8 +38,6 @@ operationはCLIサブコマンドではなく、ユーザーが求める結果�
 - 今後の収集方針を変えたい
 - memoを確定情報へ昇格したい
 
-旧`capture`と`memo`の指定は互換入力として`update`へ、旧`scope`の表示・変更は`knowledge-policy.md`の表示・更新へ読み替える。新しい操作として案内しない。
-
 ## 共通ルール
 
 - 書き込み前に[ナレッジ Policy](references/knowledge-policy.md)を読み、プロジェクトの`knowledge-policy.md`へ適用する。

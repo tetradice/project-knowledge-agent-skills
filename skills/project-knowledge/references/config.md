@@ -21,6 +21,6 @@ publish:
 
 `human_readable: true`では人間がそのまま読める文章を優先する。falseでは検索効率、簡潔さ、構造、重複回避を優先するが、断片的にしすぎない。
 
-`learning.mode`は`manual`、`opportunistic`、`aggressive`のいずれかとする。詳細は[learning-modes.md](learning-modes.md)を読む。既定値は`opportunistic`。旧`update.automatic_after_work`はfalseをmanual、trueをopportunisticへ移行する。
+`learning.mode`は`manual`、`opportunistic`、`aggressive`のいずれかとする。詳細は[learning-modes.md](learning-modes.md)を読む。既定値は`opportunistic`。
 
 ユーザーが「今後は自動的に更新して」「明示時だけ更新して」などと自然言語で指示した場合も設定変更として処理する。
