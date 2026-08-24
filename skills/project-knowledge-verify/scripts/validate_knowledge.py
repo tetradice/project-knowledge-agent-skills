@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""プロジェクトナレッジを変更せず構造検証する。"""
+"""Project Knowledgeを変更せず構造検証する。"""
 
 from __future__ import annotations
 

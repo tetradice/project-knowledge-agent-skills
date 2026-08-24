@@ -1,0 +1,6 @@
+interface:
+  display_name: "Project Knowledge Publish"
+  short_description: "KnowledgeをMarkdownやoffline HTMLへ出力"
+  default_prompt: "Use $project-knowledge-publish to publish Project Knowledge as an offline HTML deliverable."
+policy:
+  allow_implicit_invocation: false

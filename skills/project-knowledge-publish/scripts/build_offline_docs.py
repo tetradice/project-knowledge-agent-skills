@@ -5,7 +5,7 @@
 # ]
 # ///
 
-"""人間向けMarkdownをfile://対応のMaterial for MkDocsサイトへ変換する。"""
+"""Project KnowledgeのMarkdownをfile://対応のMaterial for MkDocsサイトへ変換する。"""
 
 from __future__ import annotations
 
@@ -204,4 +204,3 @@ def check_reference(root: Path, owner: Path, target: str, errors: list[str], war
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

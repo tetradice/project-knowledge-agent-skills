@@ -12,7 +12,7 @@ generated:
 
 ## Skill
 
-- [プロジェクトナレッジ Skill](skill/index.md): update中心の操作、provenance、learning mode、migration、検証方針を把握するときに読む。
+- [プロジェクトナレッジ Skill](skill/index.md): 5 Skillの責務分割、explicit-only境界、update、provenance、learning mode、migrationを把握するときに読む。
 
 ## References
 

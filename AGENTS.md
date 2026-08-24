@@ -1,5 +1,5 @@
 <!-- project-knowledge:start -->
 ## プロジェクトナレッジ
 
-プロジェクト固有情報が必要な場合は、まず `project-knowledge/docs/index.md` を確認し、indexから必要な文書だけを段階的に読んでください。ナレッジの保守には `project-knowledge` Skillを使用し、追加要否は `project-knowledge/knowledge-policy.md` に基づいて判断してください。`learning.mode` が自動更新を許可する場合は、毎ターンではなく作業単位の完了時だけナレッジ-worthyな情報を評価し、細かな実装変更を無制限に保存しないでください。
+Project Knowledgeの構築・更新には`project-knowledge`を使用し、追加要否は`project-knowledge/knowledge-policy.md`に基づいて判断してください。Knowledgeだけを根拠に回答する場合は`project-knowledge-fast-ask`、成果物生成・正確性検証・構造監査にはそれぞれ`project-knowledge-publish`、`project-knowledge-verify`、`project-knowledge-audit`を明示的に使用してください。通常のプロジェクト質問では`project-knowledge-fast-ask`を自動使用しないでください。`learning.mode`が自動更新を許可しても、評価は毎ターンではなく作業単位の完了時に行ってください。
 <!-- project-knowledge:end -->

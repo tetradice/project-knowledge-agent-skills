@@ -1,3 +1,4 @@
+/* Project KnowledgeのオフラインHTML用テーマ */
 :root {
   --pk-font-body: "Segoe UI", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
   --pk-font-mono: "Cascadia Code", "Cascadia Mono", Consolas, monospace;
@@ -44,4 +45,3 @@ pre {
   max-width: 100%;
   border-radius: 0.5rem;
 }
-

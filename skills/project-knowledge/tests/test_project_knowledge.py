@@ -7,11 +7,17 @@ from pathlib import Path
 
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
+SKILLS_ROOT = SKILL_ROOT.parent
+PUBLISH_ROOT = SKILLS_ROOT / "project-knowledge-publish"
+VERIFY_ROOT = SKILLS_ROOT / "project-knowledge-verify"
+AUDIT_ROOT = SKILLS_ROOT / "project-knowledge-audit"
+ASK_ROOT = SKILLS_ROOT / "project-knowledge-fast-ask"
 
 
-def run_script(name: str, *args: object) -> subprocess.CompletedProcess[str]:
+def run_script(name: str, *args: object, skill_root: Path = SKILL_ROOT) -> subprocess.CompletedProcess[str]:
+    # 所有Skillのscriptsから対象コマンドを実行
     return subprocess.run(
-        [sys.executable, str(SKILL_ROOT / "scripts" / name), *(str(arg) for arg in args)],
+        [sys.executable, str(skill_root / "scripts" / name), *(str(arg) for arg in args)],
         capture_output=True,
         text=True,
         check=False,
@@ -172,7 +178,7 @@ def test_validator_is_read_only_and_does_not_inspect_scope(tmp_path: Path) -> No
     (root / "scope.md").write_text("legacy file", encoding="utf-8")
     before = {path: path.read_bytes() for path in root.rglob("*") if path.is_file()}
 
-    result = run_script("validate_knowledge.py", root, "--json")
+    result = run_script("validate_knowledge.py", root, "--json", skill_root=VERIFY_ROOT)
     after = {path: path.read_bytes() for path in root.rglob("*") if path.is_file()}
 
     assert result.returncode == 0
@@ -191,7 +197,7 @@ def test_validator_checks_reference_provenance(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    result = run_script("validate_knowledge.py", root, "--json")
+    result = run_script("validate_knowledge.py", root, "--json", skill_root=VERIFY_ROOT)
     codes = {finding["code"] for finding in json.loads(result.stdout)}
 
     assert result.returncode == 1
@@ -208,7 +214,10 @@ def test_skill_contract_exposes_update_centered_operations() -> None:
     learning = (SKILL_ROOT / "references" / "learning-modes.md").read_text(encoding="utf-8")
 
     # 公開操作と自動学習の主要な安全境界をSkill契約として固定
-    assert operations == {"update", "ask", "init", "publish", "verify", "audit", "config"}
+    assert operations == {"update", "init", "config"}
+    assert "質問回答、成果物生成、網羅的な検証、構造監査は扱わない" in skill
+    for removed_reference in ("ask.md", "publishing.md", "verification.md", "audit.md"):
+        assert not (SKILL_ROOT / "references" / removed_reference).exists()
     assert not (SKILL_ROOT / "references" / "capture.md").exists()
     assert not (SKILL_ROOT / "references" / "memo.md").exists()
     assert not (SKILL_ROOT / "references" / "scope.md").exists()
@@ -221,8 +230,8 @@ def test_update_contract_covers_provenance_policy_and_incremental_flow() -> None
     update = (SKILL_ROOT / "references" / "update.md").read_text(encoding="utf-8")
     provenance = (SKILL_ROOT / "references" / "provenance.md").read_text(encoding="utf-8")
     policy = (SKILL_ROOT / "templates" / "knowledge-policy.md").read_text(encoding="utf-8")
-    verification = (SKILL_ROOT / "references" / "verification.md").read_text(encoding="utf-8")
-    audit = (SKILL_ROOT / "references" / "audit.md").read_text(encoding="utf-8")
+    verification = (VERIFY_ROOT / "references" / "verification.md").read_text(encoding="utf-8")
+    audit = (AUDIT_ROOT / "references" / "audit.md").read_text(encoding="utf-8")
 
     # 依頼された意味的シナリオを構成する各契約が保守されていることを確認
     assert "user assertion" in update
@@ -242,6 +251,33 @@ def test_update_contract_covers_provenance_policy_and_incremental_flow() -> None
     assert "ナレッジ Policy" in audit
     assert "scope" not in verification.lower()
     assert "scope" not in audit.lower()
+
+
+def test_specialized_skills_are_explicit_only_and_do_not_auto_chain() -> None:
+    expected_boundaries = {
+        ASK_ROOT: ("project-knowledge/docs/**", "フォールバックせず"),
+        PUBLISH_ROOT: ("Markdown", "逆同期せず"),
+        VERIFY_ROOT: ("read-only", "更新を自動実行しない"),
+        AUDIT_ROOT: ("read-only", "改善を自動実行しない"),
+    }
+
+    # descriptionとUI policyの両方で暗黙発火を防止
+    for skill_root, required_text in expected_boundaries.items():
+        skill = (skill_root / "SKILL.md").read_text(encoding="utf-8")
+        metadata = (skill_root / "agents" / "openai.yaml").read_text(encoding="utf-8")
+        assert "Explicit-only" in skill
+        assert "allow_implicit_invocation: false" in metadata
+        assert all(value in skill for value in required_text)
+
+
+def test_agents_template_routes_specialized_operations_explicitly() -> None:
+    template = (SKILL_ROOT / "templates" / "agents-block.md").read_text(encoding="utf-8")
+
+    # init後のAGENTS.mdに新しい責務境界を短く反映
+    assert "project-knowledge-fast-ask" in template
+    assert "通常のプロジェクト質問" in template
+    for name in ("project-knowledge-publish", "project-knowledge-verify", "project-knowledge-audit"):
+        assert name in template
 
 
 def test_detect_changes_without_git(tmp_path: Path) -> None:
@@ -280,7 +316,7 @@ def test_detect_changes_with_git(tmp_path: Path) -> None:
 
 
 def test_offline_config_has_no_external_assets(tmp_path: Path) -> None:
-    sys.path.insert(0, str(SKILL_ROOT / "scripts"))
+    sys.path.insert(0, str(PUBLISH_ROOT / "scripts"))
     from build_offline_docs import render_config
 
     # file://配布向けのローカル資産だけを使う

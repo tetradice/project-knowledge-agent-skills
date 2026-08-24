@@ -1,6 +1,6 @@
 # ナレッジ Policy
 
-`project-knowledge/knowledge-policy.md`は対象領域のallow-listではなく、情報を永続的なナレッジとして保存する価値を判断する収集・品質ポリシーである。update、opportunistic評価、verify、auditで参照する。
+`project-knowledge/knowledge-policy.md`は対象領域のallow-listではなく、情報を永続的なナレッジとして保存する価値を判断する収集・品質ポリシーである。updateとopportunistic評価で参照する。
 
 ## ナレッジ-worthy判定
 

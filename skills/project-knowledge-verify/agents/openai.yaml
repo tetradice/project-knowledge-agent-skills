@@ -1,0 +1,6 @@
+interface:
+  display_name: "Project Knowledge Verify"
+  short_description: "Knowledgeの正確性と鮮度をread-only検証"
+  default_prompt: "Use $project-knowledge-verify to check whether Project Knowledge is accurate and current."
+policy:
+  allow_implicit_invocation: false

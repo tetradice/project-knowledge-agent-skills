@@ -1,4 +1,4 @@
-# publish
+# Publishing
 
 ナレッジをsource of truthのまま保持し、成果物は`published/`へ再生成する。公開物からナレッジへ逆同期しない。
 

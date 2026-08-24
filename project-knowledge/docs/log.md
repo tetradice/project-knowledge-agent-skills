@@ -8,6 +8,17 @@ generated:
 
 # ナレッジ log
 
+## 2026-08-25 — Knowledge限定回答Skillを改名
+
+- `project-knowledge-ask`を`project-knowledge-fast-ask`へ改名した。
+- Skillの明示呼び出し契約、AGENTS.md生成テンプレート、README、回帰テスト、Project Knowledgeのsource参照を新名称へ同期した。
+
+## 2026-08-25 — Project Knowledgeを5 Skillへ責務分割
+
+- メインSkillを`init`、`update`、`config`へ純化し、ask、publish、verify、auditを専用Skillへ分離した。
+- 4つの専用Skillをexplicit-onlyにし、暗黙発火、情報源フォールバック、検出後の自動更新、update後の自動publishを禁止した。
+- offline HTML生成処理はpublish、構造検証処理はverifyへ移し、AGENTS.mdの初期化テンプレートと利用例を新構成へ更新した。
+
 ## 2026-08-23 — verify操作のmemoを現行Policyに同期
 
 verify操作のmemoから旧`scope`を現行のプロジェクトナレッジ Policyへ置き換えた。検証対象、Information Architectureとの分離、索引説明を現行Skillの`verification.md`に合わせた。

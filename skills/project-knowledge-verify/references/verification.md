@@ -1,6 +1,6 @@
-# verify
+# Verification
 
-常にread-onlyで開始する。`validate_knowledge.py`と`detect_changes.py`をread-onlyで実行し、OKF frontmatter、index/log、broken link、orphan、sources、消失source、stale、前回update以降の変更を調べる。
+常にread-onlyで実行する。このSkillの`validate_knowledge.py`をread-onlyで実行し、OKF frontmatter、index/log、broken link、orphan、sources、消失source、staleを調べる。Git差分、config、capture、memoと現在の実装も読み取りだけで比較する。
 
 AIによる意味検査では次を確認する。
 
@@ -11,4 +11,4 @@ AIによる意味検査では次を確認する。
 - 廃止情報、欠損Reference、関連情報の分散がないか
 - indexからの検索性、段階的な読み込み、ページ量、情報のまとまりが自然か
 
-結果をHigh/Medium/Lowで分類し、修正は行わない。修正可能なら、対象を示してupdateを案内する。
+結果をHigh/Medium/Lowで分類し、修正は行わない。修正可能なら、対象を示して`project-knowledge`による更新を案内するだけにする。
