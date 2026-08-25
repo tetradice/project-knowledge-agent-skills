@@ -1,15 +1,10 @@
 ---
-title: プロジェクトナレッジ
-description: プロジェクト固有情報を探す起点
-version: "0.1.0"
-generated:
-  by: project-knowledge
+okf_version: "0.2"
 ---
 
-# プロジェクトナレッジ
+# {{project_name}} Project Knowledge
 
-プロジェクトナレッジのカテゴリへの案内をここへ追加してください。各リンクには、どの質問や作業で読むかを記載します。対象領域とページ構成は固定せず、`knowledge-policy.md`に基づいて必要なナレッジだけを追加します。
+プロジェクトの共有Knowledgeへの入口です。
 
-## References
-
-- [References](references/index.md): 原文、仕様、会話から抽出した判断材料を確認するときに読む。
+- [Change Log](log.md)
+- [References](references/index.md)

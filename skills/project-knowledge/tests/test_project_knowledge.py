@@ -65,8 +65,8 @@ def test_empty_init_creates_management_skeleton_only(tmp_path: Path) -> None:
         "index.md",
         "log.md",
         "references/index.md",
-        "references/captures/index.md",
-        "references/memos/index.md",
+        "references/user-statements/index.md",
+        "references/interactions/index.md",
     }
 
 
@@ -189,10 +189,10 @@ def test_validator_is_read_only_and_does_not_inspect_scope(tmp_path: Path) -> No
 def test_validator_checks_reference_provenance(tmp_path: Path) -> None:
     run_script("init_project.py", tmp_path)
     root = tmp_path / "project-knowledge"
-    capture = root / "docs" / "references" / "captures" / "invalid.md"
-    capture.write_text(
-        "---\ntitle: Invalid\ndescription: Invalid capture\nversion: \"0.1.0\"\n"
-        "generated:\n  by: test\npk_source_kind: memo\npk_authority: secondary\npk_trust: provisional\n"
+    reference = root / "docs" / "references" / "user-statements" / "invalid.md"
+    reference.write_text(
+        "---\ntype: Reference\npk_source_type: invalid\n"
+        "generated:\n  by: test\n  at: never\n"
         "---\n\n# Invalid\n",
         encoding="utf-8",
     )
@@ -201,7 +201,11 @@ def test_validator_checks_reference_provenance(tmp_path: Path) -> None:
     codes = {finding["code"] for finding in json.loads(result.stdout)}
 
     assert result.returncode == 1
-    assert {"invalid-pk-source-kind", "invalid-pk-authority", "invalid-pk-trust"} <= codes
+    assert {
+        "invalid-reference-source-type",
+        "invalid-generated-actor",
+        "invalid-generated-timestamp",
+    } <= codes
 
 
 def test_skill_contract_exposes_update_centered_operations() -> None:
@@ -234,17 +238,21 @@ def test_update_contract_covers_provenance_policy_and_incremental_flow() -> None
     audit = (AUDIT_ROOT / "references" / "audit.md").read_text(encoding="utf-8")
 
     # 依頼された意味的シナリオを構成する各契約が保守されていることを確認
-    assert "user assertion" in update
-    assert "conversation-derived" in update
+    assert "category" in update
+    assert "derivation" in update
     assert "detect_changes.py" in update
     assert "毎回全体を再解析しない" in update
     assert "収集方針" in update
-    assert "pk_source_kind: capture" in provenance
-    assert "pk_authority: primary" in provenance
-    assert "pk_trust: trusted" in provenance
-    assert "pk_source_kind: memo" in provenance
-    assert "pk_authority: secondary" in provenance
-    assert "pk_trust: provisional" in provenance
+    assert "index.md" in update
+    assert "ナビゲーション" in update
+    assert "通常Conceptへ分離" in update
+    assert "user-statement" in provenance
+    assert "interaction-record" in provenance
+    assert "project-artifact" in provenance
+    assert "pk_authority" in provenance
+    assert "主観的な格付けは保存しない" in provenance
+    assert "generated" in provenance
+    assert "verified" in provenance
     assert "対象領域およびページ構成は固定しない" in policy
     assert "Knowledge Policy" in verification
     assert "provenance" in verification

@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["PyYAML>=6.0,<7"]
+# ///
+
 """プロジェクトナレッジの安全で冪等な初期構造を作成する。"""
 
 from __future__ import annotations
@@ -8,6 +13,14 @@ import re
 import shutil
 from pathlib import Path
 
+from migrate_project import (
+    CURRENT_FORMAT_VERSION,
+    LEGACY_FORMAT_VERSION,
+    FormatError,
+    apply_migration,
+    detect_format,
+    plan_migration,
+)
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES = SKILL_ROOT / "templates"
@@ -28,11 +41,58 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    # 初期化先と移行対象を確定
+    # 初期化先とデータ形式を確定
     project_root = args.project_root.resolve()
     knowledge_root = project_root / "project-knowledge"
     docs_root = knowledge_root / "docs"
     policy_path = knowledge_root / "knowledge-policy.md"
+    changes: list[str] = []
+
+    try:
+        format_version = detect_format(project_root)
+    except FormatError as exc:
+        # scope-only bundles predate format 0.1 and are handled by the existing
+        # policy migration below. Other unknown layouts are never guessed.
+        existing = (
+            {path.name for path in knowledge_root.iterdir()}
+            if knowledge_root.exists()
+            else set()
+        )
+        if existing and existing <= {
+            "scope.md",
+            "scope.yml",
+            "config.yml",
+            "config.local.yml",
+        }:
+            format_version = None
+        else:
+            print(f"Cannot initialize project-knowledge: {exc}")
+            return 1
+
+    if format_version == LEGACY_FORMAT_VERSION:
+        try:
+            plan = plan_migration(project_root, CURRENT_FORMAT_VERSION)
+            if plan.conflicts:
+                print("Cannot migrate project-knowledge; existing files were preserved")
+                for conflict in plan.conflicts:
+                    print(f"conflict: {conflict}")
+                return 1
+            migrated = apply_migration(plan)
+            changes.extend(
+                f"migrated: {path.relative_to(project_root).as_posix()}"
+                for path in migrated
+            )
+            format_version = CURRENT_FORMAT_VERSION
+        except FormatError as exc:
+            print(f"Cannot migrate project-knowledge: {exc}")
+            return 1
+    elif format_version not in {None, CURRENT_FORMAT_VERSION}:
+        print(
+            f"Cannot initialize unsupported format {format_version}; "
+            "update the Project Knowledge skill"
+        )
+        return 1
+
     migrated_scopes = migrate_legacy_scopes(knowledge_root, policy_path)
     if migrated_scopes is None:
         print("Cannot safely migrate legacy scope; existing files were preserved")
@@ -40,8 +100,8 @@ def main() -> int:
 
     # 必要なディレクトリを作成
     for directory in (
-        docs_root / "references" / "captures",
-        docs_root / "references" / "memos",
+        docs_root / "references" / "user-statements",
+        docs_root / "references" / "interactions",
         knowledge_root / "published" / "markdown",
         knowledge_root / "published" / "html",
         knowledge_root / ".cache",
@@ -56,17 +116,23 @@ def main() -> int:
         "index.md": docs_root / "index.md",
         "log.md": docs_root / "log.md",
         "reference-index.md": docs_root / "references" / "index.md",
-        "captures-index.md": docs_root / "references" / "captures" / "index.md",
-        "memos-index.md": docs_root / "references" / "memos" / "index.md",
+        "user-statements-index.md": docs_root / "references" / "user-statements" / "index.md",
+        "interactions-index.md": docs_root / "references" / "interactions" / "index.md",
         "project.gitignore": knowledge_root / ".gitignore",
     }
-    changes = [
+    changes.extend(
         f"migrated: project-knowledge/{path.name} -> project-knowledge/knowledge-policy.md"
         for path in migrated_scopes
-    ]
+    )
     for template_name, destination in files.items():
         if not destination.exists():
-            shutil.copyfile(TEMPLATES / template_name, destination)
+            if template_name == "index.md":
+                rendered = (TEMPLATES / template_name).read_text(encoding="utf-8").replace(
+                    "{{project_name}}", project_root.name
+                )
+                destination.write_text(rendered, encoding="utf-8", newline="\n")
+            else:
+                shutil.copyfile(TEMPLATES / template_name, destination)
             changes.append(f"created: {destination.relative_to(project_root).as_posix()}")
 
     # 旧boolean設定をlearning modeへ移行
@@ -81,6 +147,11 @@ def main() -> int:
     agents_change = update_agents_block(agents_path)
     if agents_change:
         changes.append(f"{agents_change}: AGENTS.md managed block")
+
+    manifest = knowledge_root / "manifest.yml"
+    if not manifest.exists():
+        shutil.copyfile(TEMPLATES / "manifest.yml", manifest)
+        changes.append(f"created: {manifest.relative_to(project_root).as_posix()}")
 
     print("Initialized project-knowledge")
     for change in changes:

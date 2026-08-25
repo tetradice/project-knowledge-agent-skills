@@ -9,8 +9,6 @@ knowledge:
   human_readable: false
 learning:
   mode: opportunistic
-memo:
-  require_approval_for_trust: true
 publish:
   markdown: true
   html:
@@ -21,6 +19,6 @@ publish:
 
 `human_readable: true`では人間がそのまま読める文章を優先する。falseでは検索効率、簡潔さ、構造、重複回避を優先するが、断片的にしすぎない。
 
-`learning.mode`は`manual`、`opportunistic`、`aggressive`のいずれかとする。詳細は[learning-modes.md](learning-modes.md)を読む。既定値は`opportunistic`。
+`learning.mode`は`manual`、`opportunistic`、`aggressive`のいずれかとする。詳細は[learning-modes.md](learning-modes.md)を読む。既定値は`opportunistic`。legacyの`memo.require_approval_for_trust`は形式0.2では使用しない。
 
 ユーザーが「今後は自動的に更新して」「明示時だけ更新して」などと自然言語で指示した場合も設定変更として処理する。

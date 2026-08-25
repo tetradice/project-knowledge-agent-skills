@@ -1,4 +1,4 @@
-version: 1
-last_update_at: 2026-08-23T13:40:19+09:00
-last_update_commit: 20d2efc
+last_update_at: 2026-08-26T01:31:00+09:00
+last_update_commit: 6d51cbd
 snapshot_file: .cache/source-snapshot.json
+state_schema_version: 1

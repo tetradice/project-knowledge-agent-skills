@@ -1,15 +1,13 @@
 ---
-title: "verify操作の検証範囲"
-description: "verifyはナレッジの整合性・鮮度・Policy適合性をread-onlyで検査し、重要度別に報告する"
-version: "0.1.0"
+title: verify操作の検証範囲
+description: verifyはナレッジの整合性・鮮度・Policy適合性をread-onlyで検査し、重要度別に報告する
+version: 0.1.0
 generated:
-  by: project-knowledge
-  at: 2026-08-23T00:00:00Z
-pk_source_kind: memo
-pk_authority: secondary
-pk_trust: provisional
+  by: project-knowledge/0.1.0
+  at: 2026-08-23 00:00:00+00:00
+pk_source_type: interaction-record
+type: Reference
 ---
-
 # verify操作の検証範囲
 
 ## 決定・前提

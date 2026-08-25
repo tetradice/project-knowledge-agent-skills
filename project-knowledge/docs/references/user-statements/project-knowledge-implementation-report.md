@@ -1,18 +1,13 @@
 ---
-title: "プロジェクトナレッジ Agent Skill 実装報告"
-description: "プロジェクトナレッジ Skillの初期実装に関するユーザー指定レポートの原文"
-version: "0.1.0"
+title: プロジェクトナレッジ Agent Skill 実装報告
+description: プロジェクトナレッジ Skillの初期実装に関するユーザー指定レポートの原文
+version: 0.1.0
 generated:
-  by: project-knowledge
-  at: 2026-08-23T00:00:00Z
-sources:
-  - id: implementation-report
-    resource: "../../../../PROJECT_KNOWLEDGE_IMPLEMENTATION_REPORT.md"
-pk_source_kind: capture
-pk_authority: primary
-pk_trust: trusted
+  by: project-knowledge/0.1.0
+  at: 2026-08-23 00:00:00+00:00
+pk_source_type: user-statement
+type: Reference
 ---
-
 # プロジェクトナレッジ Agent Skill 実装報告
 
 ## 1. 作成・変更したファイル

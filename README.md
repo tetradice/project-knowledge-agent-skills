@@ -14,13 +14,13 @@ npx skills add https://github.com/tetradice/project-knowledge-agent-skills
 
 責務ごとに5つのSkillへ分かれています。
 
-| Skill | 責務 | 発火条件 |
-| --- | --- | --- |
-| `project-knowledge` | Knowledgeの初期構築・追加・更新・設定 | ナレッジへの反映などの自然言語intent、または明示指定 |
-| `project-knowledge-fast-ask` | `project-knowledge/docs/**`だけを根拠に回答 | 明示指定のみ |
-| `project-knowledge-publish` | Markdownまたはoffline HTMLを生成 | 明示指定のみ |
-| `project-knowledge-verify` | 正確性・鮮度・形式をread-only検証 | 明示指定のみ |
-| `project-knowledge-audit` | 重複・肥大化・構造をread-only監査 | 明示指定のみ |
+| Skill | 版 | 責務 | 発火条件 |
+| --- | --- | --- | --- |
+| `project-knowledge` | `0.2.0` | Knowledgeの初期構築・追加・更新・設定 | ナレッジへの反映などの自然言語intent、または明示指定 |
+| `project-knowledge-fast-ask` | `0.2.0` | `project-knowledge/docs/**`だけを根拠に回答 | 明示指定のみ |
+| `project-knowledge-publish` | `0.2.0` | Markdownまたはoffline HTMLを生成 | 明示指定のみ |
+| `project-knowledge-verify` | `0.2.0` | 正確性・鮮度・形式をread-only検証 | 明示指定のみ |
+| `project-knowledge-audit` | `0.2.0` | 重複・肥大化・構造をread-only監査 | 明示指定のみ |
 
 日常的なKnowledgeの構築・更新には`project-knowledge`を使います。`init`、`update`、`config`はCLIサブコマンドではなく、自然言語のintentとして解釈されます。
 
@@ -33,7 +33,7 @@ npx skills add https://github.com/tetradice/project-knowledge-agent-skills
 今後は障害対応で判明したことも積極的に保存してください。
 ```
 
-`capture`と`memo`はユーザー操作ではなく、一次情報と会話由来情報を区別する内部provenanceです。旧`capture` / `memo`指定は互換入力として`update`へ読み替えます。旧`scope`指定はKnowledge Policyの表示・変更へ読み替えますが、新しい操作としては案内しません。
+User StatementとInteraction Recordはユーザー操作ではなく、一次情報と作業経緯を区別する内部provenanceです。旧`capture` / `memo`指定は互換入力として`update`へ読み替えます。旧`scope`指定はKnowledge Policyの表示・変更へ読み替えますが、新しい操作としては案内しません。
 
 旧`$project-knowledge ask|publish|verify|audit`は実行せず、対応する専用Skillの明示指定を案内します。新しい利用例は次のとおりです。
 
@@ -61,6 +61,41 @@ $project-knowledge init
 ```
 
 管理ファイルと最低限の構造だけが必要な場合は`$project-knowledge init --empty`を使います。
+
+## バージョン
+
+Skill版とKnowledge形式版は独立して管理します。Skill版は各`SKILL.md`の`metadata.version`にあるSemVer、Knowledge形式版は`project-knowledge/manifest.yml`にある二要素の版です。
+
+```yaml
+format: project-knowledge
+format_version: "0.2"
+```
+
+このほかに、`docs/index.md`の`okf_version: "0.2"`と、`state.yml`の`state_schema_version`があります。SkillのbugfixだけでKnowledge形式版を上げる必要はありません。
+
+manifestがなく、旧`docs/`、config、state構造を持つBundleは形式0.1として検出されます。変更内容の事前確認とmigrationは次のように実行できます。
+
+```console
+uv run skills/project-knowledge/scripts/migrate_project.py . --target 0.2 --check
+uv run skills/project-knowledge/scripts/migrate_project.py . --target 0.2
+```
+
+同名・異内容の移動先がある場合は、全変更を行わず停止します。0.1 Bundleへの`init`または`update`は、書込み前に同じmigrationを行います。未知形式や対応版より新しい形式は推測して変更しません。
+
+## 分類とprovenance
+
+形式0.2の通常Conceptは、情報の種類を`category`、導出方法を`derivation`で別々に記録します。代表的な4ケースは次のとおりです。
+
+| ケース | `category` | `derivation` | 例 |
+| --- | --- | --- | --- |
+| 人がプロジェクト方針を明示 | `declared` | `direct` | 「認証方式はOIDCとする」 |
+| 一つのartifactから明示事項を抽出 | `extracted` | `direct` | configの設定値 |
+| 複数artifactの明示事項を統合 | `extracted` | `synthesized` | READMEと実装からまとめた起動手順 |
+| sourceにない結論を推論 | `derived` | `inferred` | 実装差分から推定した設計意図 |
+
+未検証の`inferred` Conceptは`status: draft`とします。検証後も、推論から生まれた来歴は変えません。`sources`の各sourceには`user-statement`、`reference-document`、`project-artifact`、`interaction-record`、`change-implementation`のいずれかを`pk_source_type`として記録します。
+
+`generated`は現在内容の生成者、`verified`は独立した確認者です。User Statementを保存しただけではhuman verificationになりません。trust tierは保存せず、`verified`から`unverified`、`machine-confirmed`、`human-reviewed`を表示時に導出します。
 
 ## Knowledge Policy
 

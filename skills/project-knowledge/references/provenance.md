@@ -1,19 +1,48 @@
-# Provenance
+# Provenance and verification
 
-captureとmemoはユーザー操作ではなく、情報がどこから来たかを示す内部Reference種別である。
+`sources`はOKF provenanceとして、Conceptの根拠となるresourceを保持する。sourceごとにProject Knowledge独自の`pk_source_type`を付ける。
 
-| kind | 用途 | authority | 初期trust |
-| --- | --- | --- | --- |
-| `capture` | ユーザーが直接提示した仕様・事実・決定事項の原文 | `primary` | `trusted` |
-| `memo` | 会話からAIが意味的に抽出した決定・理由・制約・未解決事項 | `secondary` | `provisional` |
-| `source-code` | 現在の実装 | 実装根拠 | 検査時点の状態 |
-| `config` | 設定・build・dependency・infra | 設定根拠 | 検査時点の状態 |
-| `schema` | DB・API schema・migration | schema根拠 | 検査時点の状態 |
-| `external-reference` | 外部仕様・文書 | 出典に依存 | 出典に依存 |
-| `existing-knowledge` | 既存の整理済みナレッジ | 二次的 | provenanceに依存 |
+| `pk_source_type` | 用途 |
+| --- | --- |
+| `user-statement` | ユーザーが会話で宣言したプロジェクト固有情報 |
+| `reference-document` | ユーザーが提供した外部・補助文書 |
+| `project-artifact` | リポジトリ内のコード、設定、文書 |
+| `interaction-record` | 会話や作業経緯の記録 |
+| `change-implementation` | 実装された変更そのもの |
 
-captureを作る場合はユーザー原文を`docs/references/captures/`へ保持し、`pk_source_kind: capture`、`pk_authority: primary`、`pk_trust: trusted`を付ける。memoを作る場合は会話ログを複製せず再利用価値のある判断材料だけを`docs/references/memos/`へ記録し、`pk_source_kind: memo`、`pk_authority: secondary`、`pk_trust: provisional`を付ける。
+```yaml
+sources:
+  - resource: ../references/user-statements/2026-08-26-version-policy.md
+    author: human:user
+    pk_source_type: user-statement
+```
 
-すべてのupdateでReferenceを作らない。ソース変更から既存ナレッジを直接更新でき、別の由来を保持する価値がなければ不要である。Referenceとナレッジ本文に同じ説明を二重保存しない。
+ユーザー発言は`docs/references/user-statements/`、作業経緯は`docs/references/interactions/`へ保存する。`pk_authority`、`pk_trust`のような主観的な格付けは保存しない。
 
-`memo.require_approval_for_trust: true`では、ユーザーが「この内容で確定」「正式なものとして扱う」などと明示した場合だけmemoを`trusted`へ昇格する。provenanceはmemoのまま維持する。captureやtrusted memoと実装が矛盾する場合は勝者を機械的に決めず、不一致をナレッジへ明示する。
+プロジェクト内部の方針や判断について、ユーザー宣言は一次情報になり得る。一方、外部事実に関する発言を、ユーザー発言であるという理由だけで確認済みにしない。
+
+## generatedとverified
+
+- `generated`は現在の内容を生成または更新したactorを表す。
+- `verified`は内容を独立に確認したactorと時刻を表す。
+- ユーザーが情報を提供したことと、人が検証したことは別である。
+- Skill actorには版を含める。例: `project-knowledge/0.3.0`、`project-knowledge-verify/0.2.0`。
+
+```yaml
+generated:
+  by: project-knowledge/0.3.0
+  at: 2026-08-26T00:00:00+09:00
+verified:
+  by: project-knowledge-verify/0.2.0
+  at: 2026-08-26T00:10:00+09:00
+```
+
+trust tierは保存せず、`verified`から表示時に導出する。
+
+| 導出tier | 条件 |
+| --- | --- |
+| `unverified` | `verified`がない |
+| `machine-confirmed` | `verified.by`がversion付きSkillまたはprocess actor |
+| `human-reviewed` | `verified.by`が`human:*` |
+
+verify Skillはread-onlyであり、成功時もverification event候補を報告するだけである。ユーザーが反映を求めたupdateだけが`verified`を保存する。

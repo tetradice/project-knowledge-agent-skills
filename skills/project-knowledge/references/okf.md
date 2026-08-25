@@ -1,22 +1,32 @@
-# OKF v0.2
+# OKF v0.2 compatibility
 
-`docs/` 全体をナレッジ Bundleとして扱い、`docs/index.md` と `docs/log.md` を必須とする。通常のナレッジ文書はConceptとして、少なくとも次のfrontmatterを持たせる。
+`project-knowledge/docs/`はOKF v0.2 bundleである。Knowledge形式版は`project-knowledge/manifest.yml`に記録し、OKF版とは別に管理する。
+
+通常のConceptは、予約ファイル以外のMarkdownとしてparse可能なYAML frontmatterを持ち、空でない`type`を含む。Project Knowledge形式0.2で新規作成する通常Conceptには、さらに`category`と`derivation`を含める。`sources`の各項目には`resource`と`pk_source_type`を含める。
 
 ```yaml
 ---
-title: 文書タイトル
-description: いつ読む文書かが分かる短い説明
-version: "0.1.0"
-generated:
-  by: ai-agent
-  at: 2026-08-23T00:00:00Z
+type: Architecture
+category: extracted
+derivation: synthesized
 sources:
-  - id: implementation
-    resource: ../../../src/example.ts
+  - resource: ../../../README.md
+    pk_source_type: project-artifact
+generated:
+  by: project-knowledge/0.3.0
+  at: 2026-08-26T00:00:00+09:00
 ---
 ```
 
-根拠がない場合も`generated`を残し、推測を事実として書かない。検証済みなら`verified`、陳腐化期限が妥当なら`stale_after`を追加する。絶対パスは避ける。ナレッジからReferenceへは相対リンクまたは`sources.resource`で追跡可能にする。
+actorはOKFのactor文字列として扱う。人は`human:<id>`、処理は`process:<id>`、Skillは`<skill-name>/<semver>`を使用する。
 
-indexはルーティング文書であり、各リンクに「何を判断するときに読むか」を添える。`log.md` は変更の要約、対象、根拠を追記し、秘密情報や会話全文を保存しない。
+## Reserved files
 
+- root `index.md`のfrontmatterは`okf_version: "0.2"`だけを持つ。
+- nested `index.md`はfrontmatterを持たない。
+- rootおよびnested `log.md`はfrontmatterを持たない。
+- `log.md`の見出しは日付形式にする。
+
+本文リンクはMarkdownファイルからの相対パス、`sources[].resource`はbundle root基準のパスまたは有効なURIとして解決する。claim単位でsourceを示す場合は、本文中にsource ID付きfootnoteを置く。
+
+OKFで任意のfieldでも、Project Knowledge形式0.2が新規Conceptに要求するfieldはvalidatorで検査する。
