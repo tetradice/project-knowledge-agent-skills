@@ -66,7 +66,7 @@ def check_knowledge_policy(findings: list[dict[str, str]], root: Path) -> None:
     # Policyが対象領域一覧ではなく価値判断を扱える最小構造を確認
     text = policy_path.read_text(encoding="utf-8")
     for heading, code in (
-        ("# プロジェクトナレッジ Policy", "invalid-knowledge-policy-title"),
+        ("# プロジェクトKnowledge Policy", "invalid-knowledge-policy-title"),
         ("## 基本方針", "missing-policy-principles"),
         ("## 積極的に保存する情報", "missing-policy-include-criteria"),
         ("## 原則として保存しない情報", "missing-policy-exclude-criteria"),

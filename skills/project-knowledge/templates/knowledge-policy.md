@@ -1,4 +1,4 @@
-# プロジェクトナレッジ Policy
+# プロジェクトKnowledge Policy
 
 ## 基本方針
 

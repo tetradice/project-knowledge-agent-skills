@@ -9,7 +9,7 @@
 - 細かすぎる、巨大すぎる、古い、利用されないナレッジ
 - 不要な分割・カテゴリ、関連情報の分散、統合候補
 - orphan、肥大化したindex、不要metadata、`.cache/`や生成物の残骸
-- ナレッジ Policyに反する情報
+- Knowledge Policyに反する情報
 
 Information Architectureでは、巨大ページへの過度な集約、不自然な階層、関連情報の分断、indexからの探しにくさ、より簡潔にできる再編候補を確認する。
 

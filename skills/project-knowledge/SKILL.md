@@ -27,7 +27,7 @@ description: Project Knowledgeを初期構築し、プロジェクト・ユー�
 
 ## 共通ルール
 
-- 書き込み前に[ナレッジ Policy](references/knowledge-policy.md)を読み、プロジェクトの`knowledge-policy.md`へ適用する。秘密情報や一時情報は永続化しない。
+- 書き込み前に[Knowledge Policy](references/knowledge-policy.md)を読み、プロジェクトの`knowledge-policy.md`へ適用する。秘密情報や一時情報は永続化しない。
 - `learning.mode`が自動更新を許可しても、毎ターンではなく作業単位の完了時だけ候補を評価する。詳細は[learning-modes.md](references/learning-modes.md)を読む。
 - 既存ファイルを上書き・削除するときは、選択したReferenceの手順に従う。
 

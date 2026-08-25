@@ -33,7 +33,7 @@ npx skills add https://github.com/tetradice/project-knowledge-agent-skills
 今後は障害対応で判明したことも積極的に保存してください。
 ```
 
-`capture`と`memo`はユーザー操作ではなく、一次情報と会話由来情報を区別する内部provenanceです。旧`capture` / `memo`指定は互換入力として`update`へ読み替えます。旧`scope`指定はナレッジ Policyの表示・変更へ読み替えますが、新しい操作としては案内しません。
+`capture`と`memo`はユーザー操作ではなく、一次情報と会話由来情報を区別する内部provenanceです。旧`capture` / `memo`指定は互換入力として`update`へ読み替えます。旧`scope`指定はKnowledge Policyの表示・変更へ読み替えますが、新しい操作としては案内しません。
 
 旧`$project-knowledge ask|publish|verify|audit`は実行せず、対応する専用Skillの明示指定を案内します。新しい利用例は次のとおりです。
 
@@ -62,7 +62,7 @@ $project-knowledge init
 
 管理ファイルと最低限の構造だけが必要な場合は`$project-knowledge init --empty`を使います。
 
-## ナレッジ Policy
+## Knowledge Policy
 
 `project-knowledge/knowledge-policy.md`は対象領域のallow-listではなく、将来利用価値のある情報を保存するか判断する品質ポリシーです。新しい領域でも、プロジェクト固有で再利用価値があり、Policyに反しなければナレッジへ追加できます。
 
@@ -79,4 +79,4 @@ learning:
 - `opportunistic`: 作業単位の完了時に候補を評価し、価値がある場合だけ更新します。既定値です。
 - `aggressive`: opportunisticより広めに候補を拾いますが、一時情報や重複は保存しません。
 
-旧`update.automatic_after_work`はinit時にmanualまたはopportunisticへ安全に移行されます。旧`scope.md` / `scope.yml`も、対象指定をallow-listとして残さずナレッジ Policyへ意味的に移行されます。
+旧`update.automatic_after_work`はinit時にmanualまたはopportunisticへ安全に移行されます。旧`scope.md` / `scope.yml`も、対象指定をallow-listとして残さずKnowledge Policyへ意味的に移行されます。

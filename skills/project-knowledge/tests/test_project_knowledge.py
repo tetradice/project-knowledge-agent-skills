@@ -246,9 +246,9 @@ def test_update_contract_covers_provenance_policy_and_incremental_flow() -> None
     assert "pk_authority: secondary" in provenance
     assert "pk_trust: provisional" in provenance
     assert "対象領域およびページ構成は固定しない" in policy
-    assert "ナレッジ Policy" in verification
+    assert "Knowledge Policy" in verification
     assert "provenance" in verification
-    assert "ナレッジ Policy" in audit
+    assert "Knowledge Policy" in audit
     assert "scope" not in verification.lower()
     assert "scope" not in audit.lower()
 

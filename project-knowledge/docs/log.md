@@ -21,7 +21,7 @@ generated:
 
 ## 2026-08-23 — verify操作のmemoを現行Policyに同期
 
-verify操作のmemoから旧`scope`を現行のプロジェクトナレッジ Policyへ置き換えた。検証対象、Information Architectureとの分離、索引説明を現行Skillの`verification.md`に合わせた。
+verify操作のmemoから旧`scope`を現行のプロジェクトKnowledge Policyへ置き換えた。検証対象、Information Architectureとの分離、索引説明を現行Skillの`verification.md`に合わせた。
 
 ## 2026-08-23 — update操作統合の実装報告を同期
 
@@ -29,10 +29,10 @@ verify操作のmemoから旧`scope`を現行のプロジェクトナレッジ Po
 - 内容: 実装報告をprovenanceへ追加し、16件の自動テストを含む検証実績と、意味判断・未知scope・互換aliasに関する既知の制約を反映。
 - 根拠: [update操作統合・scope廃止 実装報告](../../UPDATE_OPERATION_INTEGRATION_REPORT.md)
 
-## 2026-08-23 — update統合・scope廃止・ナレッジ Policy導入
+## 2026-08-23 — update統合・scope廃止・Knowledge Policy導入
 
 - 対象: プロジェクトナレッジ Skillの操作体系、provenance、Policy、learning mode、migration、verify、audit
-- 内容: ナレッジ書き込みをupdateへ統合し、capture/memoを内部provenanceへ変更。scopeを廃止してopen-world型のナレッジ Policyを導入し、新規既定をopportunisticとした。
+- 内容: ナレッジ書き込みをupdateへ統合し、capture/memoを内部provenanceへ変更。scopeを廃止してopen-world型のKnowledge Policyを導入し、新規既定をopportunisticとした。
 - 移行: このリポジトリの旧scopeをPolicyへ意味的に変換し、`automatic_after_work: false`は互換性のため`learning.mode: manual`へ移行。
 - 根拠: `skills/project-knowledge/`のSkill、references、templates、scripts、tests
 

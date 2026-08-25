@@ -38,9 +38,9 @@ sources:
 
 4つの専用Skillは`agents/openai.yaml`で`allow_implicit_invocation: false`とし、descriptionと本文でもexplicit-onlyを明記する。通常質問、一般的な要約、通常の実装レビュー、一般的な文書レビューからは自動発火させない。
 
-ユーザーが提示した原文、会話から抽出した判断、実装差分、収集方針変更は、すべてupdate内で情報源を分類して処理する。`capture`と`memo`はユーザー操作ではなく内部provenanceであり、旧`capture` / `memo`指定だけを互換入力としてupdateへ読み替える。旧`scope`指定はナレッジ Policyの表示・更新へ読み替える。
+ユーザーが提示した原文、会話から抽出した判断、実装差分、収集方針変更は、すべてupdate内で情報源を分類して処理する。`capture`と`memo`はユーザー操作ではなく内部provenanceであり、旧`capture` / `memo`指定だけを互換入力としてupdateへ読み替える。旧`scope`指定はKnowledge Policyの表示・更新へ読み替える。
 
-## ナレッジ Policyとopen-world
+## Knowledge Policyとopen-world
 
 `project-knowledge/knowledge-policy.md`は対象領域のallow-listではなく、情報の将来価値を判断する収集・品質Policyである。プロジェクト固有性、再利用性、持続性、背景や理由、重要な制約、誤った場合の影響、明示的な保存指示を考慮する。
 

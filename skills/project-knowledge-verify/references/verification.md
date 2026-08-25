@@ -4,7 +4,7 @@
 
 AIによる意味検査では次を確認する。
 
-- ナレッジ Policyに反する情報や保存価値の低い情報が大量にないか
+- Knowledge Policyに反する情報や保存価値の低い情報が大量にないか
 - 重要なナレッジが現在のソースと矛盾していないか
 - capture、memo、source、config、schemaなどのprovenanceと主張が整合しているか
 - provisional情報を確定情報として扱っていないか
