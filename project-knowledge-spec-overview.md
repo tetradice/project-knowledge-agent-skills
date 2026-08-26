@@ -11,20 +11,29 @@ Project Knowledgeは、リポジトリ固有の仕様、設計判断、運用知
 
 ## 4つのスキル
 
-責務の混在と意図しない副作用を避けるため、保守、限定回答、公開、構造監査を4つのSkillに分離しています。
+責務の混在と意図しない副作用を避けるため、保守、限定回答、公開、構造監査・構造改善を4つのSkillに分離しています。
 
 | スキル | 主な責務 | 呼び出し方 |
 | --- | --- | --- |
-| `project-knowledge` | 初期構築、Knowledgeの追加と更新、内容・根拠・鮮度・形式の検証、設定変更 | 自然言語の依頼から使用可能。verifyは明示的な検証依頼時だけ |
+| `project-knowledge` | 初期構築、Knowledgeの追加と更新、内容・根拠・鮮度・形式の検証と修正、設定変更 | 自然言語の依頼から使用可能。verify/fixは明示的な検査・修正依頼時だけ |
 | `project-knowledge-fast-ask` | Knowledgeだけを根拠に回答 | 明示指定のみ |
 | `project-knowledge-publish` | 人間向けMarkdownまたはオフラインHTMLを生成 | 明示指定のみ |
-| `project-knowledge-audit` | 重複、肥大化、分断、検索性を読み取り専用で監査 | 明示指定のみ |
+| `project-knowledge-audit` | 重複、肥大化、分断、検索性を監査し、明示時は保守的にrefactor | 明示指定のみ |
 
-メインスキルは`init`、`update`、`verify`、`config`を扱います。
+メインスキルは`init`、`update`、`verify`、`fix`、`config`を扱います。
 `init`は空のKnowledge Baseを作る初期構築、`update`は新しい情報・実装差分・収集方針の反映、`config`は既知の運用設定の表示・変更を担います。`pk_category`、`pk_derivation`、source種別は、利用者に選択を求めず、入力と根拠からスキルが判定します。
-各操作とほかの3スキルは互いを自動実行せず、情報不足時の通常調査、verifyでの検出事項の自動更新、update後の自動verify、更新後の自動公開も行いません。ユーザーがupdateとverifyを両方明示した場合だけ、その順に実行できます。
-`verify`は既存Knowledgeの内容健全性を、形式、source、provenance、根拠、現在状態、鮮度、Knowledge間の意味的整合性の順に確認します。結果は`pass`、`fail`、`warning`、`not-verifiable`、`stale`、`not-applicable`を区別します。確認に成功しても`verified`は書き換えず、必要ならverification event候補を報告し、反映は別途依頼された`update`で行います。未登録Knowledgeのcoverage調査や、重複・肥大化・分断・検索性などの構造健全性は対象外で、後者は`project-knowledge-audit`が扱います。
-この境界により、「保守（構築・追加・更新・検証・設定）」「限定回答」「公開」「構造監査」を個別に制御できます。
+保守操作は次の認知モデルで分けます。
+
+| 観点 | 検査のみ | 検査＋修正 |
+| --- | --- | --- |
+| Knowledge内容の正しさ | `verify` | `fix` |
+| Knowledge Baseの構造・品質 | `audit` | `refactor` |
+
+`verify`は既存Knowledgeの内容健全性を、形式、source、provenance、根拠、現在状態、鮮度、Knowledge間の意味的整合性の順にread-onlyで確認します。`fix`は同じ観点で明白な問題を修正して再検査します。`audit`は重複・肥大化・分断・検索性などをread-onlyで診断し、`refactor`は意味・source・provenanceを維持しながら構造を改善して再診断します。
+
+各操作とほかの3スキルは互いを自動実行しません。`verify`から`fix`、`audit`から`refactor`へ自動昇格せず、書き込みはユーザーが`update`、`fix`、`refactor`を明示的に意図した場合だけ行います。`project-knowledge-audit`はexplicit-onlyを維持し、一般的な「整理して」「改善して」から自動実行しません。
+
+この境界により、「保守（構築・追加・更新・検証・修正・設定）」「限定回答」「公開」「構造監査・構造改善」を個別に制御できます。
 
 ## データフォーマット
 
@@ -159,7 +168,7 @@ learning:
 - Knowledge Policyによるopen-worldな収集は、対象領域を固定する方式より長期運用に向いているか。
 - `pk_category`と`pk_derivation`の二軸は、実務で扱える複雑さに収まっているか。
 - User Statement、Interaction Record、Reference、Conceptの分離は、根拠追跡と保守コストの釣り合いが取れているか。
-- `verify`と`audit`を読み取り専用にし、反映を別の`update`へ委ねる設計は堅すぎないか。
+- `verify`/`fix`と`audit`/`refactor`の対は、日常的な修正の簡便さと書き込み境界の安全性を両立できているか。
 - `opportunistic`な自動学習を「毎ターン」ではなく「作業単位の完了時」に限定する境界は明確か。
 - Skill版、Knowledge形式版、OKF版、state schema版の分離は、変更判断を明確にする効果と運用負荷が釣り合っているか。
 - 運用設定と意味的なPolicyを`knowledge-policy.md`にまとめた認知モデルは、利用者が迷わず変更できるか。

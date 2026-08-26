@@ -1,6 +1,6 @@
 # update
 
-新しい情報、現在のプロジェクト状態、既存ナレッジを確認し、将来利用価値のあるプロジェクトナレッジを追加・修正・整理する。ユーザー提示情報、会話、実装差分、ナレッジ収集方針の変更を同じ操作で扱う。
+新しい情報、変更された仕様、現在のプロジェクト状態、ユーザーから与えられたKnowledgeを確認し、将来利用価値のあるプロジェクトナレッジへ反映する。ユーザー提示情報、会話、実装差分、ナレッジ収集方針の変更を同じ操作で扱う。既存Knowledgeを検査して客観的な問題を正す作業は`fix`、Knowledge Baseの構造改善は`project-knowledge-audit`の`refactor`へ委ねる。
 
 1. [Format 1.0](data-formats/1.0.md)に従って形式1.0であることを確認し、それ以外へは書き込まない。
 2. 今回利用可能な情報を確認する。実装反映では`detect_changes.py`をread-onlyで使う。Gitでは有効な`git_baseline_commit`からHEADまでと、staged、working tree、untrackedを抽出する。baselineが無効なら全tracked fileへフォールバックする。Gitがなければ固定位置のhash snapshotとの差分を使う。

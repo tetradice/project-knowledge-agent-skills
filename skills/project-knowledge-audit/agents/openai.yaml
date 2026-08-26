@@ -1,6 +1,6 @@
 interface:
   display_name: "Project Knowledge Audit"
-  short_description: "Knowledge Baseの重複と構造をread-only監査"
-  default_prompt: "Use $project-knowledge-audit to audit Project Knowledge for duplication and structural bloat."
+  short_description: "Knowledge Baseの構造を監査・refactor"
+  default_prompt: "Use $project-knowledge-audit to audit or conservatively refactor Project Knowledge structure."
 policy:
   allow_implicit_invocation: false

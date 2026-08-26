@@ -32,3 +32,12 @@ project-knowledge/
 - `.cache/`: 非Git環境のhash snapshotなど、再生成可能なworking copy固有データを置く。
 
 `docs/references/user-statements/`と`docs/references/interactions/`は固定のprovenance保存先である。Raw Referenceは`type: Reference`と`pk_source_type`を持ち、通常Conceptの分類対象にはしない。
+
+## 保守操作の責務
+
+| 観点 | 検査のみ | 検査と修正 |
+| --- | --- | --- |
+| Knowledge内容の正しさ | `project-knowledge`の`verify` | `project-knowledge`の`fix` |
+| Knowledge Baseの構造・品質 | `project-knowledge-audit`の`audit` | `project-knowledge-audit`の`refactor` |
+
+`update`はこの対ではなく、新しい情報や変更をKnowledgeへ反映する。各操作は別操作を自動実行せず、書き込みは`update`、`fix`、`refactor`をユーザーが明示的に意図した場合だけ行う。

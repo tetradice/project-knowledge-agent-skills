@@ -4,9 +4,11 @@ pk_category: declared
 pk_derivation: synthesized
 status: stable
 generated:
-  by: project-knowledge/3.0.0
-  at: 2026-08-26T17:57:49+09:00
+  by: project-knowledge/3.1.0
+  at: 2026-08-26T21:21:07+09:00
 sources:
+- resource: ../references/user-statements/2026-08-26-fix-and-refactor.md
+  pk_source_type: user-statement
 - resource: ../references/user-statements/2026-08-26-verify-content-health.md
   pk_source_type: user-statement
 - resource: ../references/user-statements/2026-08-26-verify-in-main-skill.md
@@ -21,9 +23,13 @@ sources:
   pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge/references/update.md
   pk_source_type: change-implementation
+- resource: ../../../skills/project-knowledge/references/fix.md
+  pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge-fast-ask/SKILL.md
   pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge-audit/SKILL.md
+  pk_source_type: change-implementation
+- resource: ../../../skills/project-knowledge-audit/references/refactor.md
   pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge-publish/references/publishing.md
   pk_source_type: change-implementation
@@ -32,15 +38,17 @@ sources:
 
 ## 責務と操作
 
-メインの`project-knowledge`は`init`、`update`、`verify`、`config`を扱い、Knowledgeを構築・追加・更新・検証・設定して保守する。Knowledge限定回答、成果物生成、構造監査は、それぞれ`project-knowledge-fast-ask`、`project-knowledge-publish`、`project-knowledge-audit`へ分離する。
+メインの`project-knowledge`は`init`、`update`、`verify`、`fix`、`config`を扱い、Knowledgeを構築・追加・更新・検証・修正・設定して保守する。Knowledge限定回答、成果物生成、構造監査・構造改善は、それぞれ`project-knowledge-fast-ask`、`project-knowledge-publish`、`project-knowledge-audit`へ分離する。
 
-`verify`は既存Knowledgeの内容健全性を、形式、source、provenance、根拠、現在状態、鮮度、Knowledge間の意味的整合性の順にread-onlyで確認し、明示的な検証依頼時だけ実行する。結果は`pass`、`fail`、`warning`、`not-verifiable`、`stale`、`not-applicable`を区別する。通常質問や開発作業からKnowledge全体を検証せず、`update`と`verify`は互いを自動実行しない。両方を明示された場合だけ`update`から`verify`の順に実行する。
+内容・正しさの検査のみは`verify`、検査と修正は`fix`が担当する。どちらも形式、source、provenance、根拠、現在状態、鮮度、Knowledge間の意味的整合性の順に確認する。`verify`はread-onlyで、`fix`は客観的に修正できる既存Knowledgeの問題だけを直して再検査する。単なる`verify`依頼から`fix`へ昇格しない。
 
-重複、肥大化、分断、検索性などKnowledge Baseの構造健全性は`audit`、未登録Knowledgeのcoverage調査はupdateまたはdiscovery側へ委ねる。宣言された方針と実装の差異はKnowledgeの誤りと即断せずimplementation driftとして報告し、検証後も`inferred`などのprovenanceを書き換えない。
+構造・品質の診断のみは`project-knowledge-audit`の`audit`、診断と保守的な構造改善は同Skillの`refactor`が担当する。`audit`はread-onlyであり、`refactor`はKnowledgeの意味・source・provenanceを維持して再診断する。一般的な「整理して」「改善して」から自動選択せず、SkillまたはProject Knowledgeの構造refactorを明示した場合だけ実行する。
+
+`update`は新しい情報や変更を反映する操作であり、既存Knowledgeの問題を正す`fix`、既存Knowledge Baseの構造を改善する`refactor`と区別する。各操作は互いを自動実行しない。未登録Knowledgeのcoverage調査はupdateまたはdiscovery側へ委ねる。宣言された方針と実装の差異はKnowledgeの誤りと即断せずimplementation driftとして報告し、検証後も`inferred`などのprovenanceを書き換えない。
 
 3つの専用Skillはexplicit-onlyとし、通常質問、要約、実装レビュー、文書レビューから自動発火させない。各Skillは別Skillを自動実行しない。
 
-限定回答と構造監査の手順は各`SKILL.md`へ集約し、専用Referenceを持たない。公開はMarkdownとMaterial for MkDocsによるoffline HTMLだけを扱い、rendererやoffline設定を永続化しない。
+限定回答の手順は`project-knowledge-fast-ask`の`SKILL.md`へ集約する。構造監査・構造改善は`project-knowledge-audit`の`SKILL.md`から`audit`と`refactor`のReferenceへ振り分ける。公開はMarkdownとMaterial for MkDocsによるoffline HTMLだけを扱い、rendererやoffline設定を永続化しない。
 
 ## 対応形式
 
@@ -66,4 +74,4 @@ root・nested `index.md`はナビゲーション専用とする。独立して�
 
 ## 専用操作
 
-askは`project-knowledge/docs/**`だけを情報源とし、不足時は推測しない。publishは再生成可能なMarkdownとoffline HTMLを出力する。verifyはKnowledgeの内容健全性、auditはKnowledge Baseの構造健全性をread-onlyで扱う。修正が必要でも自動updateしない。
+askは`project-knowledge/docs/**`だけを情報源とし、不足時は推測しない。publishは再生成可能なMarkdownとoffline HTMLを出力する。内容の正しさは`verify`/`fix`、構造・品質は`audit`/`refactor`が、それぞれ検査のみ/検査と修正を担当する。書き込み操作へ自動昇格しない。

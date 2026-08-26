@@ -100,8 +100,8 @@ def test_all_skills_have_expected_semver() -> None:
     """各Skillが責務変更に応じた版を持つことを確認する。"""
 
     expected_versions = {
-        "project-knowledge": "3.0.0",
-        "project-knowledge-audit": "3.0.0",
+        "project-knowledge": "3.1.0",
+        "project-knowledge-audit": "3.1.0",
         "project-knowledge-fast-ask": "2.0.0",
         "project-knowledge-publish": "2.0.0",
     }

@@ -1,4 +1,4 @@
 interface:
   display_name: "Project Knowledge"
-  short_description: "Knowledgeを構築・更新・検証・設定して保守"
-  default_prompt: "Use $project-knowledge to initialize, update, verify, or configure this project's knowledge base."
+  short_description: "Knowledgeを構築・更新・検証・修正して保守"
+  default_prompt: "Use $project-knowledge to initialize, update, verify, fix, or configure this project's knowledge base."

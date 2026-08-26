@@ -26,14 +26,14 @@ sources:
 - `generated`は現在の内容を生成または更新したactorを表す。
 - `verified`は内容を独立に確認したactorと時刻を表す。
 - ユーザーが情報を提供したことと、人が検証したことは別である。
-- Skill actorには版を含める。例: `project-knowledge/3.0.0`。
+- Skill actorには版を含める。例: `project-knowledge/3.1.0`。
 
 ```yaml
 generated:
-  by: project-knowledge/3.0.0
+  by: project-knowledge/3.1.0
   at: 2026-08-26T00:00:00+09:00
 verified:
-  by: project-knowledge/3.0.0
+  by: project-knowledge/3.1.0
   at: 2026-08-26T00:10:00+09:00
 ```
 

@@ -170,7 +170,7 @@ def check_knowledge_policy(
     findings: list[Finding],
     root: Path,
 ) -> None:
-    """Policy本文と運用設定を検査する。"""
+    """Policyファイルと運用設定を検査する。"""
 
     path = root / "knowledge-policy.md"
     if not path.is_file():
@@ -194,15 +194,6 @@ def check_knowledge_policy(
             or learning.get("mode") not in {"manual", "opportunistic", "aggressive"}
         ):
             add(findings, "high", "invalid-policy-learning-mode", path, root)
-    for heading, code in (
-        ("# プロジェクトKnowledge Policy", "invalid-knowledge-policy-title"),
-        ("## 基本方針", "missing-policy-principles"),
-        ("## 積極的に保存する情報", "missing-policy-include-criteria"),
-        ("## 原則として保存しない情報", "missing-policy-exclude-criteria"),
-        ("## 構成方針", "missing-policy-structure"),
-    ):
-        if heading not in text:
-            add(findings, "high", code, path, root)
 
 
 def check_state(findings: list[Finding], root: Path) -> None:

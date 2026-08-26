@@ -98,7 +98,7 @@ Knowledgeを現在のコード、設定、文書、その他のproject artifact�
 | 11 | 複数sourceの統合を`pk_derivation: direct`としている | Provenanceは`fail` |
 | 12 | claimを支持も反証もできない | `not-verifiable` |
 | 13 | 問題を検出した | ファイルを変更せず、確認・更新候補だけを報告する |
-| 14 | verifyだけを依頼された | audit、publish、updateを実行しない |
+| 14 | verifyだけを依頼された | fix、audit、refactor、publish、updateを実行しない |
 
 ## 結果分類
 
@@ -131,6 +131,6 @@ Knowledgeを現在のコード、設定、文書、その他のproject artifact�
 
 sourceの再読、現在実装の独立確認、導出過程の再評価などを実施し、該当するStructure、Sources、Provenance、Evidence、Current State、Freshness、Consistencyに`fail`、`stale`、`not-verifiable`がない場合だけ、確認方法、actor、時刻を含むverification event候補を示す。verify自身は`verified`その他のファイルを書き換えない。
 
-古いKnowledge、metadata不整合、implementation drift、stale、source切れ、矛盾を検出しても自動修正しない。修正は別の`update`として行い、`verify`から`update`、`audit`、`publish`を自動実行しない。`update`後も`verify`を自動実行せず、ユーザーが両方を明示した場合だけ`update`から`verify`の順に実行する。
+古いKnowledge、metadata不整合、implementation drift、stale、source切れ、矛盾を検出しても自動修正しない。既存Knowledgeの問題修正は、ユーザーが明示した別の`fix`として行う。新しい情報や変更の反映は別の`update`として行う。`verify`から`fix`、`update`、`audit`、`refactor`、`publish`を自動実行しない。複数操作を実行するのは、ユーザーがそれぞれを明示した場合だけとする。
 
 verify中に未登録情報を偶然見つけても追加しない。リポジトリ全体から未登録Knowledgeを網羅的に探す作業はupdateまたはdiscovery側の別作業とする。

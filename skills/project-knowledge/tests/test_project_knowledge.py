@@ -42,19 +42,38 @@ def test_init_without_scope_is_idempotent_and_preserves_agents(tmp_path: Path) -
     assert (tmp_path / "project-knowledge" / "docs" / "index.md").read_text(encoding="utf-8") == index_before
 
 
-def test_init_creates_open_world_policy_with_operational_settings(tmp_path: Path) -> None:
+def test_init_creates_policy_from_current_template(tmp_path: Path) -> None:
     result = run_script("init_project.py", tmp_path)
     root = tmp_path / "project-knowledge"
     policy = (root / "knowledge-policy.md").read_text(encoding="utf-8")
+    template = (SKILL_ROOT / "templates" / "knowledge-policy.md").read_text(
+        encoding="utf-8"
+    )
 
     assert result.returncode == 0
-    assert "対象領域のallow-listではない" in policy
-    assert "## 積極的に保存する情報" in policy
+    assert policy == template
     assert "knowledge:\n  human_readable: false" in policy
     assert "learning:\n  mode: opportunistic" in policy
     assert not (root / "config.yml").exists()
     assert not (root / "scope.md").exists()
     assert not (root / "scope.yml").exists()
+
+
+def test_validator_accepts_freeform_policy_body(tmp_path: Path) -> None:
+    run_script("init_project.py", tmp_path)
+    root = tmp_path / "project-knowledge"
+    policy = root / "knowledge-policy.md"
+
+    # Policy本文は固定タイトルや見出しを要求しない
+    policy.write_text(
+        "---\nknowledge:\n  human_readable: false\n\n"
+        "learning:\n  mode: opportunistic\n---\n\n自由形式のPolicy本文です。\n",
+        encoding="utf-8",
+    )
+    result = run_script("validate_knowledge.py", root, "--json")
+
+    assert result.returncode == 0
+    assert json.loads(result.stdout) == []
 
 
 def test_init_preserves_gitignore_and_ignores_local_state(tmp_path: Path) -> None:
@@ -216,8 +235,8 @@ def test_skill_contract_exposes_maintenance_operations() -> None:
         if line.startswith("| `")
     }
     # 公開操作と対応Referenceの構造をSkill契約として固定
-    assert operations == {"init", "update", "verify", "config"}
-    for reference in ("init.md", "update.md", "verification.md", "config.md"):
+    assert operations == {"init", "update", "verify", "fix", "config"}
+    for reference in ("init.md", "update.md", "verification.md", "fix.md", "config.md"):
         assert (SKILL_ROOT / "references" / reference).is_file()
 
 
@@ -266,7 +285,7 @@ def test_verify_contract_covers_requested_decision_cases() -> None:
         "source errorの`fail`",
         "`implementation-drift`",
         "verifyでは構造findingにせず",
-        "audit、publish、updateを実行しない",
+        "fix、audit、refactor、publish、updateを実行しない",
     ):
         assert marker in verification
 
@@ -282,7 +301,54 @@ def test_verify_contract_preserves_provenance_and_read_only_boundaries() -> None
     assert "ユーザーが情報を発言した事実だけでは`verified`の根拠にならない" in verification
     assert "verify自身は`verified`その他のファイルを書き換えない" in verification
     assert "未登録Knowledgeを探すcoverage調査も行わない" in verification
-    assert "`verify`から`update`、`audit`、`publish`を自動実行しない" in verification
+    assert "`verify`から`fix`、`update`、`audit`、`refactor`、`publish`を自動実行しない" in verification
+
+
+def test_fix_contract_repairs_content_findings_and_rechecks() -> None:
+    """fixの修正範囲、再検査、保守的な境界をSkill契約として固定する。"""
+
+    fix = (SKILL_ROOT / "references" / "fix.md").read_text(encoding="utf-8")
+
+    # verify相当の検査後に明白な問題だけを直し、再検査する
+    for marker in (
+        "Structure、Sources、Provenance、Evidence、Current State、Freshness、Consistency",
+        "sourceやproject artifactから一意に正しい状態を確認できる問題だけを修正する",
+        "同じ観点で対象範囲を再検査する",
+        "修正しなかったfindingと理由",
+    ):
+        assert marker in fix
+
+    # updateや構造refactorへ責務を広げず、provenanceを保持する
+    assert "`update`は新しい知識、変更された仕様" in fix
+    assert "Conceptの大規模な統合・分割" in fix
+    assert "sourceと`pk_source_type`を保持する" in fix
+    assert "`verified`を自動追加・更新しない" in fix
+
+
+def test_audit_and_refactor_contract_preserves_safety_boundaries() -> None:
+    """auditのread-only境界とrefactorの保守的な改善契約を固定する。"""
+
+    skill = (AUDIT_ROOT / "SKILL.md").read_text(encoding="utf-8")
+    audit = (AUDIT_ROOT / "references" / "audit.md").read_text(encoding="utf-8")
+    refactor = (AUDIT_ROOT / "references" / "refactor.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "| `audit` |" in skill
+    assert "| `refactor` |" in skill
+    assert "`audit`はread-only" in skill
+    assert "一般的な「整理して」「改善して」" in skill
+    assert "削除・統合・分割・移動・再編を行わない" in audit
+
+    # 構造改善後の再診断と、意味・source・provenance保持を必須にする
+    for marker in (
+        "意味・情報・provenanceをできるだけ維持",
+        "sourcesを和集合として保持",
+        "同じaudit観点で対象範囲を再診断する",
+        "複数の妥当な構造案",
+        "別操作として自動実行しない",
+    ):
+        assert marker in refactor
 
 
 def test_skill_markdown_links_resolve() -> None:
@@ -313,7 +379,9 @@ def test_agents_template_routes_specialized_operations_explicitly() -> None:
     # init後のAGENTS.mdに新しい責務境界を短く反映
     assert "project-knowledge-fast-ask" in template
     assert "通常のプロジェクト質問" in template
-    assert "正確性検証には`project-knowledge`" in template
+    assert "正確性検証・修正には`project-knowledge`" in template
+    assert "`verify`は検査のみ、`fix`は検査と修正" in template
+    assert "`audit`は読み取り専用、`refactor`は構造改善" in template
     for name in ("project-knowledge-publish", "project-knowledge-audit"):
         assert name in template
     assert "project-knowledge-verify" not in template

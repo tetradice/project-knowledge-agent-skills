@@ -2,6 +2,12 @@
 
 ## 2026-08-26
 
+### fixとrefactorを追加
+
+- 内容・正しさを検査して修正する`fix`を`project-knowledge`へ追加した。
+- 構造・品質を診断して保守的に改善する`refactor`を`project-knowledge-audit`へ追加した。
+- `verify`と`audit`のread-only境界、書き込み操作への非自動昇格、`update`との責務境界を維持した。
+
 ### verifyの内容健全性検証を具体化
 
 - verifyをStructure、Sources、Provenance、Evidence、Current State、Freshness、Consistencyの順で実行する契約へ具体化した。

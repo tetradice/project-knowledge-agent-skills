@@ -9,7 +9,7 @@ pk_category: extracted
 pk_derivation: synthesized
 status: stable
 generated:
-  by: project-knowledge/3.0.0
+  by: project-knowledge/3.1.0
   at: 2026-08-26T00:00:00+09:00
 sources:
   - resource: ../../README.md
