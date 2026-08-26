@@ -2,6 +2,13 @@
 
 ## 2026-08-26
 
+### Project Knowledge形式0.3と`pk_` metadata規約を反映
+
+- Knowledge形式を`0.3`へ更新し、Project Knowledge独自のfrontmatter fieldを`pk_` prefixへ統一した。
+- `0.1`および`0.2`から`0.3`へのmigration、形式validator、テンプレート、回帰テストを同じ規約へ同期した。
+- 関連5 Skillの版とREADMEを更新し、既存のSkill概要と形式Knowledgeを0.3の契約へ移行した。
+- 実装はcommit `7459031`で完了した。テスト結果はこの更新時点で未再検証である。
+
 ### indexと通常Conceptの配置境界を明確化
 
 - メインSkillを`0.3.0`へ更新し、root・nested `index.md`をナビゲーション専用とした。
