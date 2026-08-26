@@ -18,9 +18,9 @@ from typing import Any
 import yaml
 
 FORMAT_NAME = "project-knowledge"
-CURRENT_FORMAT_VERSION = "0.2"
+CURRENT_FORMAT_VERSION = "0.3"
 LEGACY_FORMAT_VERSION = "0.1"
-MANIFEST_TEXT = 'format: project-knowledge\nformat_version: "0.2"\n'
+MANIFEST_TEXT = 'format: project-knowledge\nformat_version: "0.3"\n'
 LEGACY_MARKERS = (
     Path("docs/index.md"),
     Path("docs/log.md"),
@@ -41,9 +41,11 @@ SOURCE_TYPE_MAP = {
 DATA_FORMAT_REGISTRY = {
     "0.1": "references/data-formats/0.1.md",
     "0.2": "references/data-formats/0.2.md",
+    "0.3": "references/data-formats/0.3.md",
 }
 MIGRATION_REGISTRY = {
-    ("0.1", "0.2"): "references/migrations/0.1-to-0.2.md",
+    ("0.1", "0.3"): "references/migrations/0.1-to-0.3.md",
+    ("0.2", "0.3"): "references/migrations/0.2-to-0.3.md",
 }
 
 
@@ -169,7 +171,11 @@ def _convert_metadata(value: Any) -> Any:
     for key, item in value.items():
         if key in {"pk_authority", "pk_trust"}:
             continue
-        new_key = "pk_source_type" if key == "pk_source_kind" else key
+        new_key = {
+            "category": "pk_category",
+            "derivation": "pk_derivation",
+            "pk_source_kind": "pk_source_type",
+        }.get(key, key)
         new_value = _convert_metadata(item)
         if new_key == "pk_source_type" and isinstance(new_value, str):
             new_value = SOURCE_TYPE_MAP.get(new_value, new_value)
@@ -271,11 +277,11 @@ def _transform_markdown(text: str, relative: Path) -> str:
     if _is_raw_reference(relative):
         converted["type"] = "Reference"
         converted["pk_source_type"] = _source_type_for_path(relative)
-        converted.pop("category", None)
-        converted.pop("derivation", None)
+        converted.pop("pk_category", None)
+        converted.pop("pk_derivation", None)
     elif relative.parts and relative.parts[0] == "docs":
         converted.setdefault("type", "Knowledge")
-        if "category" not in converted or "derivation" not in converted:
+        if "pk_category" not in converted or "pk_derivation" not in converted:
             converted["pk_legacy_unclassified"] = True
     if converted or metadata is not None:
         return _dump_frontmatter(converted, body)
@@ -415,11 +421,7 @@ def plan_migration(project_root: Path | str, target: str = CURRENT_FORMAT_VERSIO
                 f"format {version} is not supported; update the Project Knowledge skill"
             )
         raise FormatError(f"no migration chain from {version} to target {target}")
-    if version != LEGACY_FORMAT_VERSION:
-        raise FormatError(
-            f"format {version} is not supported; update the Project Knowledge skill"
-        )
-
+    # 対応済みの旧形式から現在形式へ直接変換
     groups: dict[Path, list[FilePlan]] = defaultdict(list)
     for source in sorted(path for path in root.rglob("*") if path.is_file()):
         relative = source.relative_to(root)
@@ -487,6 +489,17 @@ def _post_check(root: Path) -> None:
         if path.name not in {"index.md", "log.md"}:
             if metadata is None or not isinstance(metadata.get("type"), str):
                 raise FormatError(f"Concept is missing type after migration: {relative}")
+            if metadata.get("type") != "Reference" and not metadata.get(
+                "pk_legacy_unclassified"
+            ):
+                if "pk_category" not in metadata or "pk_derivation" not in metadata:
+                    raise FormatError(
+                        f"Concept is missing prefixed classification after migration: {relative}"
+                    )
+            if "category" in metadata or "derivation" in metadata:
+                raise FormatError(
+                    f"unprefixed Project Knowledge metadata remains: {relative}"
+                )
             sources = metadata.get("sources", [])
             if isinstance(sources, list):
                 for source in sources:

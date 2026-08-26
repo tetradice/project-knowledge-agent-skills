@@ -8,7 +8,7 @@ okf_version: "0.2"
 ## Skill
 
 - [プロジェクトナレッジ Skill](skill/index.md): 5 Skillの責務分割、explicit-only境界、update、provenance、learning mode、migrationを把握するときに読む。
-- [Project Knowledge形式0.2](skill/format-0.2.md): 版の分離、分類4ケース、provenance、migration契約を確認するときに読む。
+- [Project Knowledge形式0.3](skill/format-0.3.md): OKF拡張metadataのprefix、版の分離、分類4ケース、provenance、migration契約を確認するときに読む。
 
 ## References
 

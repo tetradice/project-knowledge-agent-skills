@@ -11,6 +11,6 @@ AIによる意味検査では次を確認する。
 - 廃止情報、欠損Reference、関連情報の分散がないか
 - indexからの検索性、段階的な読み込み、ページ量、情報のまとまりが自然か
 
-形式0.1は分類欠落をwarningとして読み続け、形式0.2で新規生成された不完全ConceptはHighとする。未対応形式は推測せず停止する。
+形式0.1は分類欠落をwarningとして読み続け、形式0.2または0.3で新規生成された不完全ConceptはHighとする。形式0.3では、Project Knowledge独自metadataに`pk_`がない場合もHighとする。未対応形式は推測せず停止する。
 
 結果をHigh/Medium/Lowで分類し、修正は行わない。検証が成功しても`verified`を書き込まず、確認方法、actor、時刻を含むverification event候補を示す。ユーザーが反映を求めた場合だけ、`project-knowledge`によるupdateを案内する。

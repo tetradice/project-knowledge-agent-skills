@@ -2,7 +2,7 @@
 name: project-knowledge-audit
 description: Explicit-only read-only workflow for auditing Project Knowledge Base structure, duplication, size, and information quality. Use only when the user explicitly names project-knowledge-audit or invokes it as $project-knowledge-audit; do not use for ordinary documentation review or correctness checks.
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # Project Knowledge Baseの監査

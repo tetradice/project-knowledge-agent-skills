@@ -1,7 +1,7 @@
 ---
 type: {{type}}
-category: {{category}}
-derivation: {{derivation}}
+pk_category: {{category}}
+pk_derivation: {{derivation}}
 status: {{status}}
 generated:
   by: project-knowledge/0.3.0

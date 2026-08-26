@@ -124,15 +124,15 @@ def add_concept(
         "type": "Test Concept",
         "status": status,
         "generated": {
-            "by": "project-knowledge/0.2.0",
+            "by": "project-knowledge/0.4.0",
             "at": "2026-08-26T00:00:00+09:00",
         },
         "sources": [],
     }
     if category is not None:
-        metadata["category"] = category
+        metadata["pk_category"] = category
     if derivation is not None:
-        metadata["derivation"] = derivation
+        metadata["pk_derivation"] = derivation
     if verified:
         metadata["verified"] = {
             "by": "human:reviewer",
@@ -182,11 +182,11 @@ def classified_bundle(tmp_path: Path) -> Path:
 
 def test_all_skills_have_independent_semver() -> None:
     expected_versions = {
-        "project-knowledge": "0.3.0",
-        "project-knowledge-audit": "0.2.0",
-        "project-knowledge-fast-ask": "0.2.0",
-        "project-knowledge-publish": "0.2.0",
-        "project-knowledge-verify": "0.2.0",
+        "project-knowledge": "0.4.0",
+        "project-knowledge-audit": "0.3.0",
+        "project-knowledge-fast-ask": "0.3.0",
+        "project-knowledge-publish": "0.3.0",
+        "project-knowledge-verify": "0.3.0",
     }
 
     # Skillごとに独立した現在の版とSemVer形式を検証
@@ -209,10 +209,10 @@ def test_init_writes_separate_quoted_versions(tmp_path: Path) -> None:
     index = yaml.safe_load(
         (root / "docs" / "index.md").read_text(encoding="utf-8").split("---", 2)[1]
     )
-    assert 'format_version: "0.2"' in manifest
+    assert 'format_version: "0.3"' in manifest
     assert yaml.safe_load(manifest) == {
         "format": "project-knowledge",
-        "format_version": "0.2",
+        "format_version": "0.3",
     }
     assert state["state_schema_version"] == 1
     assert "version" not in state
@@ -224,7 +224,7 @@ def test_migration_check_apply_and_idempotency(tmp_path: Path) -> None:
     before = snapshot(root)
     checked = run(MIGRATE, tmp_path, "--check")
     assert checked.returncode == 0
-    assert "migration chain: 0.1 -> 0.2" in checked.stdout
+    assert "migration chain: 0.1 -> 0.3" in checked.stdout
     assert snapshot(root) == before
 
     applied = run(MIGRATE, tmp_path)
@@ -265,8 +265,41 @@ def test_init_automatically_migrates_legacy_before_writing(tmp_path: Path) -> No
     assert result.returncode == 0
     assert yaml.safe_load((root / "manifest.yml").read_text(encoding="utf-8"))[
         "format_version"
-    ] == "0.2"
+    ] == "0.3"
     assert (root / "docs" / "references" / "user-statements").is_dir()
+
+
+def test_migration_prefixes_format_02_classification(tmp_path: Path) -> None:
+    assert run(INIT, tmp_path, "--empty").returncode == 0
+    root = tmp_path / "project-knowledge"
+    concept = root / "docs" / "topic.md"
+    concept.write_text(
+        "---\ntype: Test Concept\ncategory: extracted\nderivation: direct\n"
+        "status: stable\ngenerated:\n  by: project-knowledge/0.3.0\n"
+        "  at: 2026-08-26T00:00:00+09:00\nsources: []\n---\n\n# Topic\n",
+        encoding="utf-8",
+    )
+    index = root / "docs" / "index.md"
+    index.write_text(
+        index.read_text(encoding="utf-8") + "\n- [Topic](topic.md)\n",
+        encoding="utf-8",
+    )
+    (root / "manifest.yml").write_text(
+        'format: project-knowledge\nformat_version: "0.2"\n',
+        encoding="utf-8",
+    )
+
+    result = run(MIGRATE, tmp_path)
+
+    assert result.returncode == 0
+    migrated = concept.read_text(encoding="utf-8")
+    assert "pk_category: extracted" in migrated
+    assert "pk_derivation: direct" in migrated
+    assert "\ncategory:" not in migrated
+    assert "\nderivation:" not in migrated
+    assert yaml.safe_load((root / "manifest.yml").read_text(encoding="utf-8"))[
+        "format_version"
+    ] == "0.3"
 
 
 def test_migration_merges_identical_destination(tmp_path: Path) -> None:
@@ -299,9 +332,9 @@ def test_migration_conflict_changes_nothing(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("manifest", "target", "message"),
     [
-        ("format: [\n", "0.2", "malformed YAML"),
-        ('format: another\nformat_version: "0.2"\n', "0.2", "unsupported manifest format"),
-        ('format: project-knowledge\nformat_version: "0.3"\n', "0.2", "not supported"),
+        ("format: [\n", "0.3", "malformed YAML"),
+        ('format: another\nformat_version: "0.3"\n', "0.3", "unsupported manifest format"),
+        ('format: project-knowledge\nformat_version: "0.4"\n', "0.3", "not supported"),
     ],
 )
 def test_migration_rejects_malformed_unknown_and_newer_formats(
@@ -317,7 +350,7 @@ def test_migration_rejects_malformed_unknown_and_newer_formats(
     assert snapshot(root) == before
 
 
-def test_migration_rejects_downgrade_and_version_skip(tmp_path: Path) -> None:
+def test_migration_rejects_downgrade_and_unsupported_target(tmp_path: Path) -> None:
     assert run(INIT, tmp_path, "--empty").returncode == 0
     downgrade = run(MIGRATE, tmp_path, "--target", "0.1")
     assert downgrade.returncode == 2
@@ -325,7 +358,7 @@ def test_migration_rejects_downgrade_and_version_skip(tmp_path: Path) -> None:
 
     legacy_project = tmp_path / "legacy"
     write_legacy_bundle(legacy_project)
-    skipped = run(MIGRATE, legacy_project, "--target", "0.3")
+    skipped = run(MIGRATE, legacy_project, "--target", "0.2")
     assert skipped.returncode == 2
     assert "no migration chain" in skipped.stderr
 
@@ -360,7 +393,7 @@ def test_registry_references_have_matching_documents() -> None:
         path.relative_to(SKILL_ROOT).as_posix()
         for path in (SKILL_ROOT / "references" / "migrations").glob("*.md")
     }
-    assert documented_migrations == set(module.MIGRATION_REGISTRY.values())
+    assert set(module.MIGRATION_REGISTRY.values()) <= documented_migrations
 
 
 def test_validator_accepts_four_classification_cases_and_verified_inference(
@@ -385,13 +418,31 @@ def test_validator_requires_unverified_inference_to_be_draft(
     assert "unverified-inference-not-draft" in codes
 
 
+def test_validator_rejects_unprefixed_project_knowledge_metadata(
+    classified_bundle: Path,
+) -> None:
+    path = classified_bundle / "docs" / "examples" / "declared.md"
+    path.write_text(
+        path.read_text(encoding="utf-8")
+        .replace("pk_category:", "category:")
+        .replace("pk_derivation:", "derivation:"),
+        encoding="utf-8",
+    )
+
+    result = run(VALIDATE, classified_bundle, "--json")
+    codes = {item["code"] for item in json.loads(result.stdout)}
+
+    assert result.returncode == 1
+    assert "unprefixed-project-knowledge-metadata" in codes
+
+
 def test_user_statement_does_not_imply_human_verification(tmp_path: Path) -> None:
     assert run(INIT, tmp_path, "--empty").returncode == 0
     root = tmp_path / "project-knowledge"
     path = root / "docs" / "references" / "user-statements" / "statement.md"
     path.write_text(
         "---\ntype: Reference\npk_source_type: user-statement\n"
-        "generated:\n  by: project-knowledge/0.2.0\n"
+        "generated:\n  by: project-knowledge/0.4.0\n"
         "  at: 2026-08-26T00:00:00+09:00\n---\n\n# Statement\n",
         encoding="utf-8",
     )

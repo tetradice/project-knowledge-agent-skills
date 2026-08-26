@@ -1,22 +1,21 @@
 ---
 type: Project Knowledge Skill
-category: extracted
-derivation: synthesized
+pk_category: extracted
+pk_derivation: synthesized
 status: stable
 generated:
-  by: project-knowledge/0.3.0
-  at: 2026-08-26T01:31:00+09:00
+  by: project-knowledge/0.4.0
+  at: 2026-08-26 12:00:00+09:00
 sources:
-  - resource: ../references/user-statements/project-knowledge-implementation-report.md
-    pk_source_type: user-statement
-  - resource: ../references/user-statements/2026-08-26-index-content-boundary.md
-    pk_source_type: user-statement
-  - resource: ../../../skills/project-knowledge/SKILL.md
-    pk_source_type: change-implementation
-  - resource: ../../../skills/project-knowledge/references/update.md
-    pk_source_type: change-implementation
+- resource: ../references/user-statements/project-knowledge-implementation-report.md
+  pk_source_type: user-statement
+- resource: ../references/user-statements/2026-08-26-index-content-boundary.md
+  pk_source_type: user-statement
+- resource: ../../../skills/project-knowledge/SKILL.md
+  pk_source_type: change-implementation
+- resource: ../../../skills/project-knowledge/references/update.md
+  pk_source_type: change-implementation
 ---
-
 # プロジェクトナレッジ Skill
 
 ## 責務と操作
@@ -41,7 +40,7 @@ indexを更新するときは、追加する文章が単独の知識として成
 
 ## Provenance
 
-通常Conceptは`category`で情報の種類、`derivation`で導出方法を独立して表す。sourceには`pk_source_type`を付け、主観的なauthorityやtrustは保存しない。ユーザー原文はUser Statement、作業経緯はInteraction Recordとして必要な場合だけ保存する。
+通常Conceptは`pk_category`で情報の種類、`pk_derivation`で導出方法を独立して表す。OKF標準外のProject Knowledge独自metadataには`pk_` prefixを付ける。sourceには`pk_source_type`を付け、主観的なauthorityやtrustは保存しない。ユーザー原文はUser Statement、作業経緯はInteraction Recordとして必要な場合だけ保存する。
 
 `generated`は現在内容の生成者、`verified`は独立した確認者である。trust tierは`verified`から表示時に導出し、User Statementであることだけをhuman verificationとはみなさない。
 
@@ -57,7 +56,7 @@ indexを更新するときは、追加する文章が単独の知識として成
 
 通常initはscope指定を要求しない。初期ナレッジの指定は今回作る内容であり、将来の対象を制限しない。`--empty`では管理ファイルと最低限のナレッジ Bundleだけを作る。
 
-manifestなしの既知構造を形式0.1として検出し、書込み前に形式0.2へ移行する。移行は事前競合検査、`--check`、同一内容統合、冪等な変換を備え、manifestを最後に書く。未知形式、より新しい形式、downgrade、版の飛び越しは変更せず拒否する。
+manifestなしの既知構造を形式0.1として検出し、形式0.1または0.2への書込み前に形式0.3へ移行する。移行は事前競合検査、`--check`、同一内容統合、冪等な変換を備え、manifestを最後に書く。未知形式、より新しい形式、downgrade、未定義の移行先は変更せず拒否する。
 
 既知形式の旧`scope.md` / `scope.yml`は、対象指定を「積極的な保存候補」、対象外・粒度条件を保存しない補足方針へ変換して`knowledge-policy.md`へ移す。未知schemaは保持して停止する。旧`update.automatic_after_work`はfalseをmanual、trueをopportunisticへ移す。
 

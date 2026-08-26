@@ -2,7 +2,7 @@
 name: project-knowledge-verify
 description: Explicit-only read-only workflow for checking whether Project Knowledge is accurate, current, well-formed, and consistent with authoritative project sources. Use only when the user explicitly names project-knowledge-verify or invokes it as $project-knowledge-verify; do not use for ordinary implementation review.
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # Project Knowledgeの検証

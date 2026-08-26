@@ -18,7 +18,7 @@ from urllib.parse import urlparse
 import yaml
 
 FORMAT_NAME = "project-knowledge"
-SUPPORTED_FORMATS = {"0.1", "0.2"}
+SUPPORTED_FORMATS = {"0.1", "0.2", "0.3"}
 CATEGORIES = {"declared", "extracted", "derived"}
 DERIVATIONS = {"direct", "synthesized", "inferred"}
 SOURCE_TYPES = {
@@ -174,7 +174,7 @@ def check_state(findings: list[Finding], root: Path, version: str | None) -> Non
     if data is None:
         add(findings, "high", "malformed-state", path, root)
         return
-    if version == "0.2":
+    if version in {"0.2", "0.3"}:
         if "state_schema_version" not in data:
             add(findings, "high", "missing-state-schema-version", path, root)
         if "version" in data:
@@ -191,7 +191,7 @@ def check_reserved(
     root: Path,
     version: str | None,
 ) -> None:
-    if version != "0.2":
+    if version not in {"0.2", "0.3"}:
         return
     if parse_error:
         add(findings, "high", f"frontmatter-{parse_error}", path, root)
@@ -248,9 +248,14 @@ def check_reference(
     version: str | None,
 ) -> None:
     source_type = metadata.get("pk_source_type")
-    if version == "0.2" and source_type not in SOURCE_TYPES:
+    if version in {"0.2", "0.3"} and source_type not in SOURCE_TYPES:
         add(findings, "high", "invalid-reference-source-type", path, root)
-    if "category" in metadata or "derivation" in metadata:
+    classification_keys = (
+        {"pk_category", "pk_derivation"}
+        if version == "0.3"
+        else {"category", "derivation"}
+    )
+    if any(key in metadata for key in classification_keys):
         add(findings, "high", "reference-has-knowledge-classification", path, root)
 
 
@@ -261,9 +266,15 @@ def check_classification(
     root: Path,
     version: str | None,
 ) -> None:
-    category = metadata.get("category")
-    derivation = metadata.get("derivation")
+    category_key = "pk_category" if version == "0.3" else "category"
+    derivation_key = "pk_derivation" if version == "0.3" else "derivation"
+    category = metadata.get(category_key)
+    derivation = metadata.get(derivation_key)
     legacy_missing = metadata.get("pk_legacy_unclassified") is True
+    if version == "0.3" and (
+        "category" in metadata or "derivation" in metadata
+    ):
+        add(findings, "high", "unprefixed-project-knowledge-metadata", path, root)
     if category not in CATEGORIES or derivation not in DERIVATIONS:
         if version == "0.1" or legacy_missing:
             add(findings, "medium", "legacy-unclassified-concept", path, root)
@@ -303,7 +314,7 @@ def check_sources(
             if not target.exists():
                 add(findings, "high", "missing-source-resource", target, root)
         source_type = source.get("pk_source_type")
-        if version == "0.2" and source_type not in SOURCE_TYPES:
+        if version in {"0.2", "0.3"} and source_type not in SOURCE_TYPES:
             add(findings, "high", "invalid-source-type", path, root)
 
 
@@ -317,7 +328,7 @@ def check_actor_event(
     required: bool,
 ) -> None:
     if value is None:
-        if required and version == "0.2":
+        if required and version in {"0.2", "0.3"}:
             add(findings, "high", f"missing-{field}", path, root)
         return
     events = value if isinstance(value, list) else [value]

@@ -16,11 +16,11 @@ npx skills add https://github.com/tetradice/project-knowledge-agent-skills
 
 | Skill | 版 | 責務 | 発火条件 |
 | --- | --- | --- | --- |
-| `project-knowledge` | `0.2.0` | Knowledgeの初期構築・追加・更新・設定 | ナレッジへの反映などの自然言語intent、または明示指定 |
-| `project-knowledge-fast-ask` | `0.2.0` | `project-knowledge/docs/**`だけを根拠に回答 | 明示指定のみ |
-| `project-knowledge-publish` | `0.2.0` | Markdownまたはoffline HTMLを生成 | 明示指定のみ |
-| `project-knowledge-verify` | `0.2.0` | 正確性・鮮度・形式をread-only検証 | 明示指定のみ |
-| `project-knowledge-audit` | `0.2.0` | 重複・肥大化・構造をread-only監査 | 明示指定のみ |
+| `project-knowledge` | `0.4.0` | Knowledgeの初期構築・追加・更新・設定 | ナレッジへの反映などの自然言語intent、または明示指定 |
+| `project-knowledge-fast-ask` | `0.3.0` | `project-knowledge/docs/**`だけを根拠に回答 | 明示指定のみ |
+| `project-knowledge-publish` | `0.3.0` | Markdownまたはoffline HTMLを生成 | 明示指定のみ |
+| `project-knowledge-verify` | `0.3.0` | 正確性・鮮度・形式をread-only検証 | 明示指定のみ |
+| `project-knowledge-audit` | `0.3.0` | 重複・肥大化・構造をread-only監査 | 明示指定のみ |
 
 日常的なKnowledgeの構築・更新には`project-knowledge`を使います。`init`、`update`、`config`はCLIサブコマンドではなく、自然言語のintentとして解釈されます。
 
@@ -68,7 +68,7 @@ Skill版とKnowledge形式版は独立して管理します。Skill版は各`SKI
 
 ```yaml
 format: project-knowledge
-format_version: "0.2"
+format_version: "0.3"
 ```
 
 このほかに、`docs/index.md`の`okf_version: "0.2"`と、`state.yml`の`state_schema_version`があります。SkillのbugfixだけでKnowledge形式版を上げる必要はありません。
@@ -76,17 +76,17 @@ format_version: "0.2"
 manifestがなく、旧`docs/`、config、state構造を持つBundleは形式0.1として検出されます。変更内容の事前確認とmigrationは次のように実行できます。
 
 ```console
-uv run skills/project-knowledge/scripts/migrate_project.py . --target 0.2 --check
-uv run skills/project-knowledge/scripts/migrate_project.py . --target 0.2
+uv run skills/project-knowledge/scripts/migrate_project.py . --target 0.3 --check
+uv run skills/project-knowledge/scripts/migrate_project.py . --target 0.3
 ```
 
 同名・異内容の移動先がある場合は、全変更を行わず停止します。0.1 Bundleへの`init`または`update`は、書込み前に同じmigrationを行います。未知形式や対応版より新しい形式は推測して変更しません。
 
 ## 分類とprovenance
 
-形式0.2の通常Conceptは、情報の種類を`category`、導出方法を`derivation`で別々に記録します。代表的な4ケースは次のとおりです。
+形式0.3の通常Conceptは、情報の種類を`pk_category`、導出方法を`pk_derivation`で別々に記録します。`pk_`はOKF標準外のProject Knowledge独自metadataを示します。代表的な4ケースは次のとおりです。
 
-| ケース | `category` | `derivation` | 例 |
+| ケース | `pk_category` | `pk_derivation` | 例 |
 | --- | --- | --- | --- |
 | 人がプロジェクト方針を明示 | `declared` | `direct` | 「認証方式はOIDCとする」 |
 | 一つのartifactから明示事項を抽出 | `extracted` | `direct` | configの設定値 |

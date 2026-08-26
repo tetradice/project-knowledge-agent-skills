@@ -2,7 +2,7 @@
 name: project-knowledge
 description: Project Knowledgeを初期構築し、プロジェクト・ユーザー指示・会話・Referenceから将来価値のあるKnowledgeを追加・更新・保守する。ナレッジへの反映、初期化、収集方針やlearning設定の変更に使用する。
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # プロジェクトナレッジ
@@ -19,7 +19,7 @@ metadata:
 | `init` | 「プロジェクトナレッジを初期化・導入して」「空で初期化して」「既存プロジェクトから初期ナレッジを作って」 | 初期化済みBundleへの通常の追加・同期 | [init.md](references/init.md) |
 | `config` | 「設定を表示・変更・解除して」「learning.mode、自動更新、人間向け文章、publish設定を変えて」 | ナレッジへ何を保存するかという方針変更 | [config.md](references/config.md) |
 
-ユーザーへcategory、derivation、source typeの選択を求めず、入力と根拠から自動判定する。
+ユーザーへ`pk_category`、`pk_derivation`、source typeの選択を求めず、入力と根拠から自動判定する。
 
 ## 分離した操作
 
@@ -30,7 +30,7 @@ metadata:
 ## 共通ルール
 
 - 書き込み前に[Knowledge Policy](references/knowledge-policy.md)を読み、プロジェクトの`knowledge-policy.md`へ適用する。秘密情報や一時情報は永続化しない。
-- 書き込み前に[Data format](references/data-format.md)を読み、形式0.1なら0.2へmigrationする。未対応形式へは書き込まない。
+- 書き込み前に[Data format](references/data-format.md)を読み、旧形式なら0.3へmigrationする。未対応形式へは書き込まない。
 - `learning.mode`が自動更新を許可しても、毎ターンではなく作業単位の完了時だけ候補を評価する。詳細は[learning-modes.md](references/learning-modes.md)を読む。
 - root・nested `index.md`はナビゲーション専用とする。独立して再利用できる知識は通常Conceptへ分離し、frontmatterで分類と根拠を保持する。
 - 既存ファイルを上書き・削除するときは、選択したReferenceの手順に従う。

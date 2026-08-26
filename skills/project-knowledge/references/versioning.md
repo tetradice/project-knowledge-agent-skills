@@ -5,7 +5,7 @@ Project Knowledgeは、用途の異なる四つの版を独立して管理する
 | 版 | Source of truth | 形式 | 用途 |
 | --- | --- | --- | --- |
 | Skill版 | 各`SKILL.md`の`metadata.version` | SemVer `MAJOR.MINOR.PATCH` | Skillの公開動作 |
-| Knowledge形式版 | `project-knowledge/manifest.yml`の`format_version` | `MAJOR.MINOR` | Knowledgeディレクトリのデータ形式 |
+| Knowledge形式版 | `project-knowledge/manifest.yml`の`format_version` | `MAJOR.MINOR` | Knowledgeディレクトリのデータ形式。現在は`0.3` |
 | OKF版 | `project-knowledge/docs/index.md`の`okf_version` | OKF仕様に従う | `docs/` bundle規約 |
 | state schema版 | `project-knowledge/state.yml`の`state_schema_version` | 整数 | 機械状態の内部schema |
 

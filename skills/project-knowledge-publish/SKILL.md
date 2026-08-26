@@ -2,7 +2,7 @@
 name: project-knowledge-publish
 description: Explicit-only workflow for publishing project-knowledge/docs as human-readable Markdown or offline HTML. Use only when the user explicitly names project-knowledge-publish or invokes it as $project-knowledge-publish; do not use for general summarization or formatting requests.
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # Project Knowledgeの公開

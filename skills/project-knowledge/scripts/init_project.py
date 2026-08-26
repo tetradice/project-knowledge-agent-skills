@@ -15,6 +15,7 @@ from pathlib import Path
 
 from migrate_project import (
     CURRENT_FORMAT_VERSION,
+    DATA_FORMAT_REGISTRY,
     LEGACY_FORMAT_VERSION,
     FormatError,
     apply_migration,
@@ -69,7 +70,7 @@ def main() -> int:
             print(f"Cannot initialize project-knowledge: {exc}")
             return 1
 
-    if format_version == LEGACY_FORMAT_VERSION:
+    if format_version in DATA_FORMAT_REGISTRY and format_version != CURRENT_FORMAT_VERSION:
         try:
             plan = plan_migration(project_root, CURRENT_FORMAT_VERSION)
             if plan.conflicts:
