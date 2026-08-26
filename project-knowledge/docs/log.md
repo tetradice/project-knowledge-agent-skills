@@ -2,6 +2,12 @@
 
 ## 2026-08-26
 
+### 仕様相談用テキストの再生成契約を追加
+
+- Project Knowledgeスキル群の仕様概要を外部チャットへ相談するための文書構成を記録した。
+- データフォーマット、独自metadata、バージョニング、`config.yml`を詳しく扱い、現行バージョン番号を載せない方針を明文化した。
+- 短い自然言語の依頼から`project-knowledge-spec-overview.md`を現行仕様で再作成する手順と確認事項を追加した。
+
 ### Project Knowledge形式0.3と`pk_` metadata規約を反映
 
 - Knowledge形式を`0.3`へ更新し、Project Knowledge独自のfrontmatter fieldを`pk_` prefixへ統一した。
