@@ -2,7 +2,7 @@
 type: Reference
 pk_source_type: user-statement
 generated:
-  by: project-knowledge/0.4.0
+  by: project-knowledge/2.0.0
   at: 2026-08-26 12:00:00+09:00
 ---
 # Project Knowledge独自metadataのprefix方針

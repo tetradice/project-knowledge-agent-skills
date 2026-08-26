@@ -1,4 +1,3 @@
-config.local.yml
+state.yml
 .cache/
 published/
-

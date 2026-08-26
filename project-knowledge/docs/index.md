@@ -7,8 +7,9 @@ okf_version: "0.2"
 
 ## Skill
 
-- [プロジェクトナレッジ Skill](skill/index.md): 5 Skillの責務分割、explicit-only境界、update、provenance、learning mode、migrationを把握するときに読む。
-- [Project Knowledge形式0.3](skill/format-0.3.md): OKF拡張metadataのprefix、版の分離、分類4ケース、provenance、migration契約を確認するときに読む。
+- [プロジェクトナレッジ Skill](skill/index.md): 4 Skillの責務分割、explicit-only境界、update、provenance、learning modeを把握するときに読む。
+- [Project Knowledge形式1.0](skill/format-1.0.md): manifest、Policy frontmatter、OKF bundle、publish境界を確認するときに読む。
+- [再構築可能なProject Knowledge state](skill/rebuildable-state.md): working copy固有state、Git baseline、非Git snapshot、復旧と検証境界を確認するときに読む。
 
 ## References
 

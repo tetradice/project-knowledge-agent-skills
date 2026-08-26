@@ -4,12 +4,9 @@ pk_category: declared
 pk_derivation: synthesized
 status: stable
 generated:
-  by: project-knowledge/0.4.0
-  at: 2026-08-26T10:31:16+09:00
+  by: project-knowledge/3.0.0
+  at: 2026-08-26T16:55:24+09:00
 sources:
-  - resource: ../references/user-statements/2026-08-26-specification-overview-regeneration.md
-    author: human:user
-    pk_source_type: user-statement
   - resource: ../../../project-knowledge-spec-overview.md
     pk_source_type: project-artifact
 ---
@@ -45,11 +42,12 @@ Project Knowledge内の関連Conceptも確認するが、現行実装と矛盾�
 - 各Skillの責務と明示呼び出しの境界
 - Knowledge Baseの構成と保存方針
 - データフォーマットとfrontmatter
-- `pk_category`、`pk_derivation`、`pk_source_type`、`pk_legacy_unclassified`の意味
+- `pk_category`、`pk_derivation`、`pk_source_type`の意味
 - provenance、生成主体、検証主体、信頼性の扱い
-- バージョンの種類、Source of Truth、更新条件、互換性、migration方針
-- `config.yml`で設定可能な項目と値の意味
-- `config.yml`と`knowledge-policy.md`の責務の違い
+- バージョンの種類、Source of Truth、更新条件、形式1.0だけを扱う境界
+- `knowledge-policy.md`のfrontmatter設定と本文Policyの役割
+- publishの対応出力、対象範囲の実行時指定、非永続化
+- `manifest.yml`、`knowledge-policy.md`、`state.yml`という認知モデル
 - 外部相談で検討したい論点
 
 具体的な現行バージョン番号は記載しない。

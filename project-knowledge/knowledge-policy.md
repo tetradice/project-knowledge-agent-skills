@@ -1,3 +1,9 @@
+---
+knowledge:
+  human_readable: false
+learning:
+  mode: manual
+---
 # プロジェクトKnowledge Policy
 
 ## 基本方針
