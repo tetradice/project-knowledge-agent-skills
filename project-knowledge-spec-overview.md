@@ -19,7 +19,7 @@ Project Knowledgeは、リポジトリ固有の仕様、設計判断、運用知
 | `project-knowledge-fast-ask` | Knowledgeだけを根拠に回答 | 明示指定のみ |
 | `project-knowledge-publish` | 人間向けMarkdownまたはオフラインHTMLを生成 | 明示指定のみ |
 | `project-knowledge-audit` | 重複、肥大化、分断、検索性を監査し、明示時は保守的にrefactor | 明示指定のみ |
-| `project-knowledge-scenario-test` | 隔離Fixture上でActor、機械検査、独立Judgeを実行し、Skill自身のE2E品質を評価 | 明示指定のみ |
+| `project-knowledge-scenario-test` | 隔離Fixture上でKnowledge生成品質を評価し、UtilityではNo-KB / With-KBの実作業品質を比較 | 明示指定のみ |
 
 メインスキルは`init`、`update`、`verify`、`fix`、`config`を扱います。
 `init`は空のKnowledge Baseを作る初期構築、`update`は新しい情報・実装差分・収集方針の反映、`config`は既知の運用設定の表示・変更を担います。`pk_category`、`pk_derivation`、source種別は、利用者に選択を求めず、入力と根拠からスキルが判定します。
@@ -32,7 +32,7 @@ Project Knowledgeは、リポジトリ固有の仕様、設計判断、運用知
 
 `verify`は既存Knowledgeの内容健全性を、形式、source、provenance、根拠、現在状態、鮮度、Knowledge間の意味的整合性の順にread-onlyで確認します。`fix`は同じ観点で明白な問題を修正して再検査します。`audit`は重複・肥大化・分断・検索性などをread-onlyで診断し、`refactor`は意味・source・provenanceを維持しながら構造を改善して再診断します。
 
-通常利用の各操作とほかの3スキルは互いを自動実行しません。`verify`から`fix`、`audit`から`refactor`へ自動昇格せず、書き込みはユーザーが`update`、`fix`、`refactor`を明示的に意図した場合だけ行います。`project-knowledge-audit`はexplicit-onlyを維持し、一般的な「整理して」「改善して」から自動実行しません。`project-knowledge-scenario-test`も通常操作から自動実行せず、開発者がQuickテストを明示した場合だけ起動します。
+通常利用の各操作とほかの3スキルは互いを自動実行しません。`verify`から`fix`、`audit`から`refactor`へ自動昇格せず、書き込みはユーザーが`update`、`fix`、`refactor`を明示的に意図した場合だけ行います。`project-knowledge-audit`はexplicit-onlyを維持し、一般的な「整理して」「改善して」から自動実行しません。`project-knowledge-scenario-test`も通常操作から自動実行せず、開発者がQuick、Model Benchmark、Utility Benchmarkを明示した場合だけ起動します。
 
 この境界により、「保守（構築・追加・更新・検証・修正・設定）」「限定回答」「公開」「構造監査・構造改善」を個別に制御し、Skill自身の品質評価も通常利用から切り離せます。
 

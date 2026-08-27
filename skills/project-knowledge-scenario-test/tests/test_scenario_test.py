@@ -301,3 +301,135 @@ def test_runner_cli_reports_unsupported_scenario(capsys: pytest.CaptureFixture[s
     captured = capsys.readouterr()
     assert exit_code == 2
     assert "unsupported scenario: full" in captured.err
+
+
+def test_prepare_utility_isolates_equal_source_workspaces() -> None:
+    """Utilityが同じsourceからBuilderと二つのTask workspaceを作ることを確認する。"""
+
+    descriptor_path = RUNNER["prepare_utility"]("utility-basic")
+    try:
+        descriptor = RUNNER["read_json"](descriptor_path)
+        workspaces = {
+            role: Path(path) for role, path in descriptor["workspaces"].items()
+        }
+
+        assert descriptor["single_run"] is True
+        assert descriptor["models"]["task"]["model"] == "gpt-5.6-terra"
+        assert descriptor["models"]["judge"]["model"] == "gpt-5.6-terra"
+        assert len(set(workspaces.values())) == 3
+        assert all((workspace / ".git").is_dir() for workspace in workspaces.values())
+        assert all(not (workspace / "task.md").exists() for workspace in workspaces.values())
+        assert all(not (workspace / "project-knowledge").exists() for workspace in workspaces.values())
+        hashes = {
+            RUNNER["tree_hash"](workspace, RUNNER["MANAGED_SOURCE_NAMES"])
+            for workspace in workspaces.values()
+        }
+        assert len(hashes) == 1
+    finally:
+        RUNNER["cleanup_utility"](descriptor_path)
+
+
+def test_install_utility_knowledge_only_changes_with_kb() -> None:
+    """BuilderのKnowledgeがWith-KBだけへ同一内容で複製されることを確認する。"""
+
+    descriptor_path = RUNNER["prepare_utility"]("utility-basic")
+    try:
+        descriptor = RUNNER["read_json"](descriptor_path)
+        builder = Path(descriptor["workspaces"]["knowledge_builder"])
+        no_kb = Path(descriptor["workspaces"]["no_kb"])
+        with_kb = Path(descriptor["workspaces"]["with_kb"])
+        initialize_knowledge(builder)
+        add_concept(builder)
+
+        knowledge = RUNNER["install_utility_knowledge"](descriptor_path)
+
+        assert knowledge["status"] == "ready"
+        assert not (no_kb / "project-knowledge").exists()
+        assert (with_kb / "project-knowledge" / "docs" / "relay-behavior.md").is_file()
+        assert RUNNER["tree_hash"](builder / "project-knowledge") == RUNNER["tree_hash"](
+            with_kb / "project-knowledge"
+        )
+    finally:
+        RUNNER["cleanup_utility"](descriptor_path)
+
+
+def test_utility_evaluation_keeps_hidden_checks_outside_workspace() -> None:
+    """未実装成果物をhidden evaluatorで判定し、hidden filesをTaskへ漏らさない。"""
+
+    descriptor_path = RUNNER["prepare_utility"]("utility-basic")
+    try:
+        descriptor = RUNNER["read_json"](descriptor_path)
+        workspace = Path(descriptor["workspaces"]["no_kb"])
+
+        result = RUNNER["evaluate_utility_condition"](descriptor_path, "no_kb")
+
+        assert result["build"] == "PASS"
+        assert result["existing_tests"] == {"passed": 2, "total": 2, "status": "PASS"}
+        assert result["hidden_tests"]["total"] == 11
+        assert result["task_success"] is False
+        assert not (workspace / "hidden_tests").exists()
+        assert not (workspace / "expectations.yml").exists()
+    finally:
+        RUNNER["cleanup_utility"](descriptor_path)
+
+
+def test_blind_candidates_hide_conditions_and_knowledge() -> None:
+    """Judge snapshotが中立名を使い、KnowledgeとGit情報を除外することを確認する。"""
+
+    descriptor_path = RUNNER["prepare_utility"]("utility-basic")
+    try:
+        descriptor = RUNNER["read_json"](descriptor_path)
+        with_kb = Path(descriptor["workspaces"]["with_kb"])
+        (with_kb / "project-knowledge").mkdir()
+
+        candidates = RUNNER["prepare_blind_candidates"](descriptor_path)
+
+        assert set(candidates) == {"Candidate A", "Candidate B"}
+        for candidate_path in map(Path, candidates.values()):
+            assert "no_kb" not in str(candidate_path)
+            assert "with_kb" not in str(candidate_path)
+            assert not (candidate_path / ".git").exists()
+            assert not (candidate_path / "project-knowledge").exists()
+    finally:
+        RUNNER["cleanup_utility"](descriptor_path)
+
+
+def test_utility_report_restores_conditions_and_calculates_delta() -> None:
+    """blind CandidateをConditionへ戻し、qualityとtestのdeltaを保存する。"""
+
+    descriptor_path = RUNNER["prepare_utility"]("utility-basic")
+    try:
+        descriptor = RUNNER["read_json"](descriptor_path)
+        for condition, passed in (("no_kb", 7), ("with_kb", 10)):
+            workspace = Path(descriptor["workspaces"][condition])
+            RUNNER["write_json"](workspace.parent / RUNNER["DETERMINISTIC_RESULT"], {
+                "condition": condition,
+                "build": "PASS",
+                "existing_tests": {"passed": 2, "total": 2, "status": "PASS"},
+                "hidden_tests": {"passed": passed, "total": 11, "categories": {}, "checks": []},
+                "scope": {"status": "PASS", "forbidden_changes": []},
+                "task_success": passed == 10,
+            })
+        scores = {descriptor["candidate_mapping"]["no_kb"]: 78, descriptor["candidate_mapping"]["with_kb"]: 92}
+        candidates = {}
+        for candidate, score in scores.items():
+            candidates[candidate] = {"dimensions": {
+                name: {"score": score, "reason": "source review", "evidence": ["src/courier/api.py"]}
+                for name in RUNNER["UTILITY_DIMENSIONS"]
+            }}
+        RUNNER["write_json"](descriptor_path.parent / RUNNER["JUDGE_RESULT"], {
+            "candidates": candidates,
+            "preference": descriptor["candidate_mapping"]["with_kb"],
+            "summary": "One candidate follows more project conventions.",
+        })
+
+        output, exit_code = RUNNER["utility_report"](descriptor_path)
+        result = RUNNER["read_json"](descriptor_path)
+
+        assert exit_code == 0
+        assert "single-run utility benchmark" in output
+        assert "7/11" in output and "10/11" in output and "+3" in output
+        assert result["delta"]["quality"] == 14
+        assert result["delta"]["tokens"]["total_tokens"] == "unavailable"
+    finally:
+        RUNNER["cleanup_utility"](descriptor_path)

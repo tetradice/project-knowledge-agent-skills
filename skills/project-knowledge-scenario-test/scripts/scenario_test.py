@@ -1,4 +1,4 @@
-"""Project Knowledge Quickシナリオの決定的な処理を実行する。"""
+"""Project KnowledgeシナリオとBenchmarkの決定的な処理を実行する。"""
 
 from __future__ import annotations
 
@@ -6,6 +6,8 @@ import argparse
 import hashlib
 import json
 import os
+import re
+import secrets
 import shutil
 import stat
 import subprocess
@@ -28,6 +30,19 @@ DETERMINISTIC_RESULT = "deterministic.json"
 JUDGE_RESULT = "judge.json"
 BENCHMARK_RESULT = "benchmark.json"
 BENCHMARK_CONFIG = SKILL_ROOT / "agents" / "benchmark.yml"
+UTILITY_RESULT = "utility.json"
+UTILITY_CONFIG = SKILL_ROOT / "agents" / "utility.yml"
+UTILITY_MARKER = ".project-knowledge-utility-benchmark.json"
+UTILITY_SCENARIO = "utility-basic"
+UTILITY_CONDITIONS = ("no_kb", "with_kb")
+UTILITY_DIMENSIONS = (
+    "requirement_compliance",
+    "project_convention_compliance",
+    "architectural_consistency",
+    "scope_discipline",
+    "code_quality",
+    "maintainability",
+)
 DIMENSIONS = (
     "correctness",
     "completeness",
@@ -36,7 +51,7 @@ DIMENSIONS = (
     "noise_rejection",
     "unsupported_claims",
 )
-MANAGED_SOURCE_NAMES = {".git", ".gitignore", "AGENTS.md", "project-knowledge"}
+MANAGED_SOURCE_NAMES = {".git", ".gitignore", "AGENTS.md", "project-knowledge", "__pycache__"}
 
 
 class ScenarioError(RuntimeError):
@@ -111,6 +126,432 @@ def unavailable_usage() -> dict[str, str]:
     return {key: "unavailable" for key in (
         "input_tokens", "output_tokens", "total_tokens", "cached_input_tokens", "reasoning_tokens"
     )}
+
+
+def load_utility_config() -> dict[str, Any]:
+    """Utility用Task AgentとJudgeの設定を読み込む。"""
+
+    try:
+        config = yaml.safe_load(UTILITY_CONFIG.read_text(encoding="utf-8"))
+    except OSError as error:
+        raise ScenarioError(f"utility configuration unavailable: {error}") from error
+    if not isinstance(config, dict):
+        raise ScenarioError("utility configuration is invalid")
+    for role in ("task", "judge"):
+        value = config.get(role)
+        if not isinstance(value, dict) or not all(
+            isinstance(value.get(key), str) for key in ("display_name", "model", "reasoning_effort")
+        ):
+            raise ScenarioError(f"utility {role} definition is invalid")
+    return config
+
+
+def prepare_utility(scenario: str) -> Path:
+    """同じsource stateからBuilderとA/B Task workspaceを準備する。"""
+
+    if scenario != UTILITY_SCENARIO:
+        raise ScenarioError(f"unsupported utility scenario: {scenario}")
+    fixture = (SCENARIOS_ROOT / scenario / "fixture").resolve()
+    if not fixture.is_dir():
+        raise ScenarioError(f"fixture not found: {fixture}")
+
+    # 三つのworkspaceを同一Fixtureから個別に複製
+    config = load_utility_config()
+    run_root = Path(tempfile.gettempdir()).resolve() / f"pk-utility-{uuid.uuid4().hex}"
+    workspaces: dict[str, str] = {}
+    try:
+        for role in ("knowledge_builder", *UTILITY_CONDITIONS):
+            workspace = prepare_fixture_workspace(fixture, run_root / role)
+            workspaces[role] = str(workspace)
+
+        # JudgeへCondition名を渡さないため、対応表だけをdescriptorへ保持
+        candidate_ids = ["Candidate A", "Candidate B"]
+        secrets.SystemRandom().shuffle(candidate_ids)
+        candidates = {
+            condition: candidate_ids[index] for index, condition in enumerate(UTILITY_CONDITIONS)
+        }
+        payload = {
+            "benchmark": "project-knowledge-utility",
+            "single_run": True,
+            "runs_per_condition": 1,
+            "scenario": scenario,
+            "task": "Add shipment cancellation API",
+            "models": config,
+            "workspaces": workspaces,
+            "candidate_mapping": candidates,
+            "usage": {
+                "knowledge_builder": unavailable_usage(),
+                "no_kb_task": unavailable_usage(),
+                "with_kb_task": unavailable_usage(),
+                "judge": unavailable_usage(),
+            },
+        }
+        write_json(run_root / UTILITY_MARKER, {"descriptor": str(run_root / UTILITY_RESULT)})
+        write_json(run_root / UTILITY_RESULT, payload)
+    except Exception:
+        if run_root.is_dir():
+            make_tree_writable(run_root)
+            shutil.rmtree(run_root)
+        raise
+    return (run_root / UTILITY_RESULT).resolve()
+
+
+def prepare_fixture_workspace(fixture: Path, run_root: Path) -> Path:
+    """Utility Fixtureを独立したGit workspaceへ複製する。"""
+
+    workspace = run_root / WORKSPACE_NAME
+    shutil.copytree(
+        fixture,
+        workspace,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo"),
+    )
+    metadata = {
+        "scenario": UTILITY_SCENARIO,
+        "fixture": str(fixture),
+        "fixture_hash": tree_hash(fixture),
+        "workspace_source_hash": tree_hash(workspace, MANAGED_SOURCE_NAMES),
+        "workspace": str(workspace.resolve()),
+    }
+    write_json(run_root / MARKER, metadata)
+    initialize_git(workspace)
+    return workspace.resolve()
+
+
+def install_utility_knowledge(descriptor_path: Path) -> dict[str, Any]:
+    """Builderの生成物を検査し、With-KB workspaceだけへ複製する。"""
+
+    descriptor = load_utility_descriptor(descriptor_path)
+    builder = Path(descriptor["workspaces"]["knowledge_builder"])
+    with_kb = Path(descriptor["workspaces"]["with_kb"])
+
+    # Builderがsource projectを変更せず有効なKnowledgeを作ったことを確認
+    builder_result = validate(builder)
+    if builder_result["status"] != "PASS":
+        raise ScenarioError("knowledge builder deterministic validation did not pass")
+    knowledge = builder / "project-knowledge"
+    target = with_kb / "project-knowledge"
+    if target.exists():
+        raise ScenarioError("with-kb workspace already contains project-knowledge")
+    shutil.copytree(knowledge, target)
+
+    # No-KB側を含む三workspaceの一次情報が同一であることを固定
+    source_hashes = {
+        role: tree_hash(Path(path), MANAGED_SOURCE_NAMES)
+        for role, path in descriptor["workspaces"].items()
+    }
+    if len(set(source_hashes.values())) != 1:
+        raise ScenarioError("utility source workspaces are not identical")
+    descriptor["knowledge"] = {
+        "status": "ready",
+        "source_hashes": source_hashes,
+        "knowledge_hash": tree_hash(knowledge),
+        "builder_deterministic": builder_result,
+    }
+    write_json(descriptor_path, descriptor)
+    return descriptor["knowledge"]
+
+
+def evaluate_utility_condition(descriptor_path: Path, condition: str) -> dict[str, Any]:
+    """Task成果物を公開test、hidden checks、scope検査で評価する。"""
+
+    if condition not in UTILITY_CONDITIONS:
+        raise ScenarioError(f"unsupported utility condition: {condition}")
+    descriptor = load_utility_descriptor(descriptor_path)
+    workspace = Path(descriptor["workspaces"][condition])
+    scenario_root = SCENARIOS_ROOT / descriptor["scenario"]
+
+    # 構文、既存回帰、Task Agent非公開の機能・設計checkを順に実行
+    build = run_command([sys.executable, "-m", "compileall", "-q", "src"], workspace)
+    candidate_tests = run_command(
+        [sys.executable, "-m", "unittest", "discover", "-s", "tests"], workspace
+    )
+    existing = run_command(
+        [sys.executable, str(scenario_root / "hidden_tests" / "regression_test.py"), str(workspace)],
+        workspace,
+    )
+    hidden = run_command(
+        [sys.executable, str(scenario_root / "hidden_tests" / "evaluate.py"), str(workspace)],
+        workspace,
+    )
+    hidden_result = parse_hidden_result(hidden)
+
+    # Task範囲外の変更とCondition間へ漏れてはいけないKnowledge変更を検出
+    changed = git_changed_paths(workspace)
+    forbidden = [path for path in changed if not path.startswith(("src/", "tests/"))]
+    if condition == "with_kb":
+        forbidden = [path for path in forbidden if not path.startswith("project-knowledge/")]
+        knowledge_hash = descriptor.get("knowledge", {}).get("knowledge_hash")
+        if knowledge_hash != tree_hash(workspace / "project-knowledge"):
+            forbidden.append("project-knowledge/ (modified)")
+    existing_total = parse_unittest_count(existing["output"])
+    result = {
+        "condition": condition,
+        "build": "PASS" if build["returncode"] == 0 else "FAIL",
+        "existing_tests": {
+            "passed": existing_total if existing["returncode"] == 0 else 0,
+            "total": existing_total,
+            "status": "PASS" if existing["returncode"] == 0 else "FAIL",
+        },
+        "candidate_tests": {
+            "passed": parse_unittest_count(candidate_tests["output"]) if candidate_tests["returncode"] == 0 else 0,
+            "total": parse_unittest_count(candidate_tests["output"]),
+            "status": "PASS" if candidate_tests["returncode"] == 0 else "FAIL",
+        },
+        "hidden_tests": hidden_result,
+        "scope": {"status": "PASS" if not forbidden else "FAIL", "forbidden_changes": forbidden},
+    }
+    result["task_success"] = all((
+        result["build"] == "PASS",
+        result["existing_tests"]["status"] == "PASS",
+        result["candidate_tests"]["status"] == "PASS",
+        hidden_result["passed"] == hidden_result["total"],
+        result["scope"]["status"] == "PASS",
+    ))
+    write_json(workspace.parent / DETERMINISTIC_RESULT, result)
+    return result
+
+
+def run_command(command: list[str], cwd: Path) -> dict[str, Any]:
+    """評価commandを実行し、診断用の結合出力を返す。"""
+
+    result = subprocess.run(command, cwd=cwd, capture_output=True, text=True, check=False)
+    return {"returncode": result.returncode, "output": (result.stdout + result.stderr).strip()}
+
+
+def parse_hidden_result(result: dict[str, Any]) -> dict[str, Any]:
+    """hidden evaluatorの機械可読結果を検証する。"""
+
+    if result["returncode"] not in {0, 1}:
+        raise ScenarioError(f"hidden evaluator failed: {result['output']}")
+    try:
+        payload = json.loads(result["output"])
+    except json.JSONDecodeError as error:
+        raise ScenarioError("hidden evaluator returned invalid JSON") from error
+    if not isinstance(payload, dict) or not all(
+        isinstance(payload.get(key), int) for key in ("passed", "total")
+    ):
+        raise ScenarioError("hidden evaluator result is invalid")
+    return payload
+
+
+def parse_unittest_count(output: str) -> int:
+    """unittest標準出力から実行件数だけを取得する。"""
+
+    match = re.search(r"Ran (\d+) tests?", output)
+    return int(match.group(1)) if match else 0
+
+
+def git_changed_paths(workspace: Path) -> list[str]:
+    """Task Agentがbaselineから変更したpathを列挙する。"""
+
+    # 先頭空白を保持するporcelain形式でpathを安全に分離
+    result = subprocess.run(
+        ["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"],
+        cwd=workspace,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip()
+        raise ScenarioError(f"cannot inspect task changes: {detail}")
+    paths = [item[3:].replace("\\", "/") for item in result.stdout.split("\0") if len(item) > 3]
+    return sorted(
+        path for path in paths
+        if "__pycache__/" not in path and not path.endswith((".pyc", ".pyo"))
+    )
+
+
+def prepare_blind_candidates(descriptor_path: Path) -> dict[str, str]:
+    """Judge用にCondition情報とKnowledgeを除いた中立snapshotを作る。"""
+
+    descriptor = load_utility_descriptor(descriptor_path)
+    blind_root = descriptor_path.parent / "blind"
+    if blind_root.exists():
+        raise ScenarioError("blind candidates already prepared")
+    paths: dict[str, str] = {}
+    for condition in UTILITY_CONDITIONS:
+        candidate = descriptor["candidate_mapping"][condition]
+        destination = blind_root / candidate.lower().replace(" ", "-")
+        shutil.copytree(
+            Path(descriptor["workspaces"][condition]),
+            destination,
+            ignore=shutil.ignore_patterns(".git", "project-knowledge", "__pycache__", "*.pyc"),
+        )
+        paths[candidate] = str(destination.resolve())
+    descriptor["blind_candidates"] = paths
+    write_json(descriptor_path, descriptor)
+    return paths
+
+
+def validate_utility_judge(judge: dict[str, Any]) -> None:
+    """Blind Judge JSONのscore契約を検証する。"""
+
+    candidates = judge.get("candidates")
+    if not isinstance(candidates, dict) or set(candidates) != {"Candidate A", "Candidate B"}:
+        raise ScenarioError("utility judge candidates are invalid")
+    for candidate, value in candidates.items():
+        if not isinstance(value, dict):
+            raise ScenarioError(f"utility judge candidate is invalid: {candidate}")
+        dimensions = value.get("dimensions")
+        if not isinstance(dimensions, dict) or set(dimensions) != set(UTILITY_DIMENSIONS):
+            raise ScenarioError(f"utility judge dimensions are invalid: {candidate}")
+        for name, dimension in dimensions.items():
+            if not isinstance(dimension, dict) or not isinstance(dimension.get("score"), int):
+                raise ScenarioError(f"utility judge score is invalid: {candidate} {name}")
+            if not 0 <= dimension["score"] <= 100:
+                raise ScenarioError(f"utility judge score is out of range: {candidate} {name}")
+            if not isinstance(dimension.get("reason"), str) or not string_list(dimension.get("evidence")):
+                raise ScenarioError(f"utility judge details are invalid: {candidate} {name}")
+    if judge.get("preference") not in {"Candidate A", "Candidate B", "tie"}:
+        raise ScenarioError("utility judge preference is invalid")
+    if not isinstance(judge.get("summary"), str):
+        raise ScenarioError("utility judge summary is invalid")
+
+
+def utility_report(descriptor_path: Path) -> tuple[str, int]:
+    """A/B結果をConditionへ復元し、delta付きReportとJSONを生成する。"""
+
+    descriptor = load_utility_descriptor(descriptor_path)
+    judge = read_json(descriptor_path.parent / JUDGE_RESULT)
+    validate_utility_judge(judge)
+    results: dict[str, Any] = {}
+    for condition in UTILITY_CONDITIONS:
+        deterministic = read_json(Path(descriptor["workspaces"][condition]).parent / DETERMINISTIC_RESULT)
+        candidate = descriptor["candidate_mapping"][condition]
+        candidate_judge = judge["candidates"][candidate]
+        results[condition] = {
+            "deterministic": deterministic,
+            "judge": candidate_judge,
+            "tokens": descriptor["usage"][f"{condition}_task"],
+            "quality_score": round(sum(
+                item["score"] for item in candidate_judge["dimensions"].values()
+            ) / len(UTILITY_DIMENSIONS)),
+        }
+    delta = utility_delta(results)
+    descriptor["results"] = results
+    descriptor["judge"] = {"preference": judge["preference"], "summary": judge["summary"]}
+    descriptor["delta"] = delta
+    write_json(descriptor_path, descriptor)
+    return render_utility_report(descriptor), 0
+
+
+def utility_delta(results: dict[str, Any]) -> dict[str, Any]:
+    """With-KBからNo-KBを引いた主要差分を計算する。"""
+
+    no_kb = results["no_kb"]
+    with_kb = results["with_kb"]
+    token_delta: dict[str, Any] = {}
+    for key in unavailable_usage():
+        left = no_kb["tokens"].get(key)
+        right = with_kb["tokens"].get(key)
+        token_delta[key] = right - left if isinstance(left, int) and isinstance(right, int) else "unavailable"
+    return {
+        "quality": with_kb["quality_score"] - no_kb["quality_score"],
+        "hidden_tests": with_kb["deterministic"]["hidden_tests"]["passed"] - no_kb["deterministic"]["hidden_tests"]["passed"],
+        "tokens": token_delta,
+    }
+
+
+def render_utility_report(payload: dict[str, Any]) -> str:
+    """Utility結果をsingle-runであることが分かる比較表へ整形する。"""
+
+    no_kb = payload["results"]["no_kb"]
+    with_kb = payload["results"]["with_kb"]
+    delta = payload["delta"]
+    existing_no, existing_with = (
+        no_kb["deterministic"]["existing_tests"], with_kb["deterministic"]["existing_tests"]
+    )
+    hidden_no, hidden_with = (
+        no_kb["deterministic"]["hidden_tests"], with_kb["deterministic"]["hidden_tests"]
+    )
+    lines = [
+        "Project Knowledge Utility Benchmark",
+        f"Task: {payload['task']}",
+        f"Task model: {payload['models']['task']['display_name']}",
+        f"Judge model: {payload['models']['judge']['display_name']}",
+        "Runs per condition: 1 (single-run utility benchmark)",
+        "",
+        "                           No-KB    With-KB    Delta",
+        f"Task success               {pass_fail(no_kb['deterministic']['task_success']):<9}{pass_fail(with_kb['deterministic']['task_success']):<11}--",
+        f"Build                      {no_kb['deterministic']['build']:<9}{with_kb['deterministic']['build']:<11}--",
+        f"Existing tests             {ratio(existing_no):<9}{ratio(existing_with):<11}--",
+        f"Hidden tests               {ratio(hidden_no):<9}{ratio(hidden_with):<11}{signed(delta['hidden_tests'])}",
+        f"Requirement score          {judge_score(no_kb, 'requirement_compliance'):<9}{judge_score(with_kb, 'requirement_compliance'):<11}{signed(judge_score(with_kb, 'requirement_compliance') - judge_score(no_kb, 'requirement_compliance'))}",
+        f"Convention score           {judge_score(no_kb, 'project_convention_compliance'):<9}{judge_score(with_kb, 'project_convention_compliance'):<11}{signed(judge_score(with_kb, 'project_convention_compliance') - judge_score(no_kb, 'project_convention_compliance'))}",
+        f"Architecture score         {judge_score(no_kb, 'architectural_consistency'):<9}{judge_score(with_kb, 'architectural_consistency'):<11}{signed(judge_score(with_kb, 'architectural_consistency') - judge_score(no_kb, 'architectural_consistency'))}",
+        f"Judge quality score        {no_kb['quality_score']:<9}{with_kb['quality_score']:<11}{signed(delta['quality'])}",
+    ]
+    for key, label in (("input_tokens", "Task input tokens"), ("output_tokens", "Task output tokens"), ("total_tokens", "Task total tokens")):
+        left = no_kb["tokens"].get(key, "unavailable")
+        right = with_kb["tokens"].get(key, "unavailable")
+        lines.append(f"{label:<27}{left!s:<12}{right!s:<12}{signed(delta['tokens'][key])}")
+    lines.extend(["", "Observed result in this run:"])
+    if delta["quality"] > 0:
+        lines.append(f"- With-KB received a {signed(delta['quality'])} higher Judge quality score.")
+    elif delta["quality"] < 0:
+        lines.append(f"- With-KB received a {signed(delta['quality'])} lower Judge quality score.")
+    else:
+        lines.append("- Both conditions received the same Judge quality score.")
+    lines.append(f"- With-KB changed the hidden-test pass count by {signed(delta['hidden_tests'])}.")
+    lines.append("- This single run does not establish a statistical improvement effect.")
+    mapping = payload["candidate_mapping"]
+    lines.extend([
+        "",
+        "Major candidate differences:",
+        f"- Blind mapping restored: No-KB = {mapping['no_kb']}; With-KB = {mapping['with_kb']}.",
+        f"- {payload['judge']['summary']}",
+    ])
+    return "\n".join(lines)
+
+
+def ratio(value: dict[str, Any]) -> str:
+    """passed/total形式へ整形する。"""
+
+    return f"{value['passed']}/{value['total']}"
+
+
+def judge_score(result: dict[str, Any], dimension: str) -> int:
+    """Condition結果から指定したJudge scoreを返す。"""
+
+    return result["judge"]["dimensions"][dimension]["score"]
+
+
+def pass_fail(value: bool) -> str:
+    """真偽値をReport用statusへ変換する。"""
+
+    return "PASS" if value else "FAIL"
+
+
+def signed(value: Any) -> str:
+    """数値deltaへ符号を付け、取得不能値はそのまま返す。"""
+
+    return f"{value:+}" if isinstance(value, int) else str(value)
+
+
+def load_utility_descriptor(descriptor_path: Path) -> dict[str, Any]:
+    """Utility descriptorと安全な一時runの対応を確認する。"""
+
+    resolved = descriptor_path.resolve()
+    marker = read_json(resolved.parent / UTILITY_MARKER)
+    if marker.get("descriptor") != str(resolved):
+        raise ScenarioError("descriptor does not match utility marker")
+    descriptor = read_json(resolved)
+    if descriptor.get("benchmark") != "project-knowledge-utility":
+        raise ScenarioError("invalid utility descriptor")
+    return descriptor
+
+
+def cleanup_utility(descriptor_path: Path) -> None:
+    """markerで識別できるUtility一時run全体を削除する。"""
+
+    load_utility_descriptor(descriptor_path)
+    run_root = descriptor_path.resolve().parent
+    temporary_root = Path(tempfile.gettempdir()).resolve()
+    if not is_within(run_root, temporary_root) or run_root == temporary_root:
+        raise ScenarioError(f"refusing cleanup outside temporary root: {run_root}")
+    make_tree_writable(run_root)
+    shutil.rmtree(run_root)
 
 
 def prepare_benchmark(scenario: str) -> Path:
@@ -659,6 +1100,16 @@ def build_parser() -> argparse.ArgumentParser:
     benchmark_prepare.add_argument("scenario")
     benchmark_report_parser = benchmark_commands.add_parser("report")
     benchmark_report_parser.add_argument("descriptor", type=Path)
+    utility_parser = commands.add_parser("utility")
+    utility_commands = utility_parser.add_subparsers(dest="utility_command", required=True)
+    utility_prepare = utility_commands.add_parser("prepare")
+    utility_prepare.add_argument("scenario")
+    for name in ("install-knowledge", "blind", "report", "cleanup"):
+        command_parser = utility_commands.add_parser(name)
+        command_parser.add_argument("descriptor", type=Path)
+    utility_evaluate = utility_commands.add_parser("evaluate")
+    utility_evaluate.add_argument("descriptor", type=Path)
+    utility_evaluate.add_argument("condition", choices=UTILITY_CONDITIONS)
     return parser
 
 
@@ -690,6 +1141,28 @@ def main(argv: list[str] | None = None) -> int:
             output, exit_code = benchmark_report(args.descriptor)
             print(output)
             return exit_code
+        if args.command == "utility":
+            if args.utility_command == "prepare":
+                print(prepare_utility(args.scenario))
+                return 0
+            if args.utility_command == "install-knowledge":
+                install_utility_knowledge(args.descriptor)
+                print("Knowledge installed into With-KB workspace")
+                return 0
+            if args.utility_command == "evaluate":
+                result = evaluate_utility_condition(args.descriptor, args.condition)
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0 if result["task_success"] else 1
+            if args.utility_command == "blind":
+                print(json.dumps(prepare_blind_candidates(args.descriptor), ensure_ascii=False, indent=2))
+                return 0
+            if args.utility_command == "report":
+                output, exit_code = utility_report(args.descriptor)
+                print(output)
+                return exit_code
+            cleanup_utility(args.descriptor)
+            print("Utility benchmark workspaces removed")
+            return 0
         cleanup(args.workspace)
         print("Temporary workspace removed")
         return 0

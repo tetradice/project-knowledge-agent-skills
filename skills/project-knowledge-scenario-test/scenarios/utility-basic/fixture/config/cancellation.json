@@ -1,0 +1,5 @@
+{
+  "cancellable_statuses": ["pending", "ready"],
+  "minimum_reason_length": 8,
+  "trim_reason_whitespace": true
+}
