@@ -34,6 +34,28 @@ def initialize_knowledge(workspace: Path) -> None:
     assert result.returncode == 0, result.stderr
 
 
+def add_concept(workspace: Path, sources: list[dict[str, str]] | None = None) -> Path:
+    """テスト用の分類済みConceptを追加する。"""
+
+    metadata = {
+        "type": "Relay behavior",
+        "status": "stable",
+        "pk_category": "extracted",
+        "pk_derivation": "direct",
+        "generated": {
+            "by": "project-knowledge/3.1.0",
+            "at": "2026-08-27T00:00:00+09:00",
+        },
+        "sources": sources if sources is not None else [
+            {"resource": "../../README.md", "pk_source_type": "project-artifact"}
+        ],
+    }
+    frontmatter = yaml.safe_dump(metadata, sort_keys=False, allow_unicode=True).rstrip()
+    concept = workspace / "project-knowledge" / "docs" / "relay-behavior.md"
+    concept.write_text(f"---\n{frontmatter}\n---\n\n# Relay behavior\n", encoding="utf-8")
+    return concept
+
+
 def valid_judge() -> dict[str, object]:
     """全観点PASSのJudge結果を作成する。"""
 
@@ -66,16 +88,48 @@ def test_prepare_isolates_fixture_and_initializes_git() -> None:
         RUNNER["cleanup"](workspace)
 
 
-def test_validate_reuses_current_project_knowledge_validator() -> None:
-    """現行形式の空Bundleがdeterministic validationを通ることを確認する。"""
+def test_validate_rejects_empty_knowledge_bundle() -> None:
+    """骨組みだけのBundleをQuick初期構築の失敗として検出する。"""
 
     workspace = prepare()
     try:
         initialize_knowledge(workspace)
         result = RUNNER["validate"](workspace)
+        codes = {item["code"] for item in result["findings"]}
+        assert result["status"] == "FAIL"
+        assert result["error"] is None
+        assert {"missing-concept", "missing-project-artifact-source"} <= codes
+    finally:
+        RUNNER["cleanup"](workspace)
+
+
+def test_validate_accepts_concept_with_project_artifact() -> None:
+    """根拠付き通常ConceptがQuickの最低契約を満たすことを確認する。"""
+
+    workspace = prepare()
+    try:
+        initialize_knowledge(workspace)
+        add_concept(workspace)
+        result = RUNNER["validate"](workspace)
         assert result["status"] == "PASS"
         assert result["error"] is None
         assert not any(item["severity"] == "high" for item in result["findings"])
+    finally:
+        RUNNER["cleanup"](workspace)
+
+
+def test_validate_requires_project_artifact_source() -> None:
+    """通常Conceptにproject artifact根拠がなければFAILとする。"""
+
+    workspace = prepare()
+    try:
+        initialize_knowledge(workspace)
+        add_concept(workspace, sources=[])
+        result = RUNNER["validate"](workspace)
+        codes = {item["code"] for item in result["findings"]}
+        assert result["status"] == "FAIL"
+        assert "missing-concept" not in codes
+        assert "missing-project-artifact-source" in codes
     finally:
         RUNNER["cleanup"](workspace)
 
@@ -86,6 +140,7 @@ def test_validate_detects_actor_source_mutation() -> None:
     workspace = prepare()
     try:
         initialize_knowledge(workspace)
+        add_concept(workspace)
         readme = workspace / "README.md"
         readme.write_text(readme.read_text(encoding="utf-8") + "\nchanged\n", encoding="utf-8")
         result = RUNNER["validate"](workspace)
@@ -103,22 +158,13 @@ def test_validate_rejects_source_outside_workspace(tmp_path: Path) -> None:
     workspace = prepare()
     try:
         initialize_knowledge(workspace)
-        concept = workspace / "project-knowledge" / "docs" / "outside-source.md"
-        metadata = {
-            "type": "Test Concept",
-            "status": "stable",
-            "pk_category": "extracted",
-            "pk_derivation": "direct",
-            "generated": {
-                "by": "project-knowledge/3.1.0",
-                "at": "2026-08-27T00:00:00+09:00",
-            },
-            "sources": [
-                {"resource": str(outside.resolve()), "pk_source_type": "project-artifact"}
+        add_concept(
+            workspace,
+            sources=[
+                {"resource": "../../README.md", "pk_source_type": "project-artifact"},
+                {"resource": str(outside.resolve()), "pk_source_type": "project-artifact"},
             ],
-        }
-        frontmatter = yaml.safe_dump(metadata, sort_keys=False, allow_unicode=True).rstrip()
-        concept.write_text(f"---\n{frontmatter}\n---\n\n# Outside source\n", encoding="utf-8")
+        )
         result = RUNNER["validate"](workspace)
         assert result["status"] == "FAIL"
         assert "source-outside-workspace" in {item["code"] for item in result["findings"]}

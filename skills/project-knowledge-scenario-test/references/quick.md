@@ -11,7 +11,7 @@
    - 依頼文: `このプロジェクトのProject Knowledgeを初期構築してください。`
    - workspaceをプロジェクトrootとして、指定Skillとそこから参照される必要なReference・scriptを通常どおり使うこと
    - workspace外のシナリオ、期待値、テスト実装を読まないこと
-3. Actor終了後、`uv run --with pyyaml <runner> validate <workspace>`を実行する。
+3. Actor終了後、`uv run --with pyyaml <runner> validate <workspace>`を実行する。既存validatorに加えて、通常Conceptが1件以上あることと、そのConceptがworkspace内に実在する`project-artifact`を1件以上参照することを検査する。骨組みだけのBundleは`missing-concept`と`missing-project-artifact-source`でFAILとする。
 4. validationがFAILまたはERRORならJudgeを起動しない。`report`でJudgeを`SKIPPED`として表示する。
 5. validationがPASSなら、JudgeをActorとは別に`model: gpt-5.6-luna`、`reasoning_effort: low`、`fork_turns: none`で起動する。Judgeには次だけを与える。
    - source projectであるworkspace。ただし`project-knowledge/`を除く

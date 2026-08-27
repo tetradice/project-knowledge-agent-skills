@@ -192,6 +192,9 @@ def validate(workspace: Path) -> dict[str, Any]:
         write_json(run_root / DETERMINISTIC_RESULT, result)
         return result
 
+    # Quick初期構築として最低限必要なKnowledgeとprovenanceを検査
+    findings.extend(find_required_knowledge(knowledge_root, workspace))
+
     # 存在するlocal sourceが隔離workspace外を指していないことを追加検査
     findings.extend(find_outside_sources(knowledge_root, workspace))
     findings.sort(key=finding_sort_key)
@@ -218,6 +221,50 @@ def run_validator(knowledge_root: Path) -> tuple[list[dict[str, str]], str | Non
     if not isinstance(findings, list) or result.returncode not in {0, 1}:
         return [], f"validator failed with exit code {result.returncode}"
     return findings, None
+
+
+def find_required_knowledge(
+    knowledge_root: Path, workspace: Path
+) -> list[dict[str, str]]:
+    """Quick初期構築に通常Conceptとproject artifact根拠を要求する。"""
+
+    findings: list[dict[str, str]] = []
+    docs = knowledge_root / "docs"
+    concepts: list[tuple[Path, dict[str, Any]]] = []
+
+    # 管理ページを除いた形式上有効な通常Conceptを収集
+    if docs.is_dir():
+        for path in sorted(docs.rglob("*.md")):
+            metadata = read_frontmatter(path)
+            if path.name in {"index.md", "log.md"} or not isinstance(metadata, dict):
+                continue
+            if all(metadata.get(key) for key in ("type", "pk_category", "pk_derivation")):
+                concepts.append((path, metadata))
+    if not concepts:
+        add_finding(findings, "high", "missing-concept", docs)
+
+    # 通常Conceptからworkspace内の実在project artifactへ到達できることを確認
+    workspace_root = workspace.resolve()
+    has_project_artifact = False
+    for path, metadata in concepts:
+        sources = metadata.get("sources")
+        if not isinstance(sources, list):
+            continue
+        for source in sources:
+            if not isinstance(source, dict) or source.get("pk_source_type") != "project-artifact":
+                continue
+            resource = source.get("resource")
+            if not isinstance(resource, str) or is_uri(resource):
+                continue
+            target = (path.parent / resource.split("#", 1)[0]).resolve()
+            if target.is_file() and is_within(target, workspace_root):
+                has_project_artifact = True
+                break
+        if has_project_artifact:
+            break
+    if not has_project_artifact:
+        add_finding(findings, "high", "missing-project-artifact-source", docs)
+    return findings
 
 
 def find_outside_sources(knowledge_root: Path, workspace: Path) -> list[dict[str, str]]:
