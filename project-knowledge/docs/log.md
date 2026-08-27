@@ -2,6 +2,11 @@
 
 ## 2026-08-27
 
+### 通常初期化の品質ゲートを追加
+
+- 通常初期化を骨組み生成だけで完了させず、代表sourceの調査と、保存価値がある場合の根拠付きConcept生成までを完了条件として記録した。
+- Quickのdeterministic validationに`missing-concept`と`missing-project-artifact-source`を追加し、改善後の独立Actor/Judge実行が全観点PASSであることを記録した。
+
 ### QuickモデルBenchmarkを追加
 
 - Quick fixtureを再利用するLuna/Terra/Solの比較、固定blind Judge、実測不能なActor tokenを`unavailable`とする契約を記録した。
