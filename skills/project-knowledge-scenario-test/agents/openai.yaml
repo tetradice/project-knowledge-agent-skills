@@ -1,0 +1,6 @@
+interface:
+  display_name: "Project Knowledge Scenario Test"
+  short_description: "Project Knowledge SkillのQuick E2E品質を評価"
+  default_prompt: "Use $project-knowledge-scenario-test quick to run the isolated developer scenario test."
+policy:
+  allow_implicit_invocation: false

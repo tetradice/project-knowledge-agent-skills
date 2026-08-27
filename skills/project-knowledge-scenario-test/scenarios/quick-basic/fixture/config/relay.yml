@@ -1,0 +1,5 @@
+delivery:
+  endpoint: https://notify.example.invalid/v1/order-events
+  retry:
+    max_attempts: 3
+    backoff_seconds: [1, 5, 15]

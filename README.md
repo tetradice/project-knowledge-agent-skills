@@ -18,6 +18,7 @@ npx skills add https://github.com/tetradice/project-knowledge-agent-skills
 | `project-knowledge-fast-ask` | `2.0.0` | Knowledgeだけを根拠に回答 |
 | `project-knowledge-publish` | `2.0.0` | Markdownまたはoffline HTMLを生成 |
 | `project-knowledge-audit` | `3.1.0` | Knowledge Baseの構造を監査・refactor |
+| `project-knowledge-scenario-test` | `1.0.0` | Project Knowledge SkillのQuick E2E品質を評価 |
 
 日常的な保守には`project-knowledge`を使います。`init`、`update`、`verify`、`fix`、`config`はCLIサブコマンドではなく、自然言語のintentです。
 
@@ -38,14 +39,17 @@ Project Knowledgeの問題を修正してください。
 今後は明示的な依頼時だけ更新してください。
 ```
 
-次の3つは明示的に指定した場合だけ実行します。
+次の4つは明示的に指定した場合だけ実行します。
 
 ```text
 $project-knowledge-fast-ask ログイン方式を教えてください。
 $project-knowledge-publish 開発環境構築をoffline HTMLとして出力してください。
 $project-knowledge-audit Knowledge Baseの重複や肥大化を監査してください。
 $project-knowledge-audit Project Knowledgeの構造をrefactorしてください。
+$project-knowledge-scenario-test quick
 ```
+
+`project-knowledge-scenario-test`はSkill開発者向けです。小さなFixtureを一時Git workspaceへ複製し、GPT-5.6 LunaのActor、既存validator、独立したGPT-5.6 LunaのJudgeを順に実行します。通常のProject Knowledge保守から自動起動せず、Quick実行後は一時workspaceを破棄します。Fullシナリオは未実装です。
 
 操作とSkillは自動連鎖しません。`verify`から`fix`、`audit`から`refactor`へ自動昇格せず、`update`後の自動検証、情報不足時の通常調査、更新後の自動publishも行いません。
 
