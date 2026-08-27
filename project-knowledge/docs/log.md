@@ -1,5 +1,12 @@
 # ナレッジ log
 
+## 2026-08-27
+
+### QuickモデルBenchmarkを追加
+
+- Quick fixtureを再利用するLuna/Terra/Solの比較、固定blind Judge、実測不能なActor tokenを`unavailable`とする契約を記録した。
+- single-run `quick-basic`のdeterministic結果とJudge結果を、実行記録とともに保存した。
+
 ## 2026-08-26
 
 ### fixとrefactorを追加
