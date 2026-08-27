@@ -1,0 +1,13 @@
+models:
+  - id: luna
+    display_name: GPT-5.6 Luna
+    model: gpt-5.6-luna
+  - id: terra
+    display_name: GPT-5.6 Terra
+    model: gpt-5.6-terra
+  - id: sol
+    display_name: GPT-5.6 Sol
+    model: gpt-5.6-sol
+judge:
+  model: gpt-5.6-luna
+  reasoning_effort: low

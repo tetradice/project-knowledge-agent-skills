@@ -11,9 +11,11 @@ Project Knowledge Skillの生成品質を、通常利用に近いActorと独立�
 
 ## 実行モード
 
-`quick`だけを扱う。`full`や未指定の別モードをQuickへ読み替えず、未対応として報告する。
+`quick`と`benchmark`を扱う。`full`や未指定の別モードをQuickへ読み替えず、未対応として報告する。
 
 Quickを実行するときは[Quick scenario](references/quick.md)を読み、記載された順序、モデル、隔離境界、終了条件に従う。
+
+Benchmarkを実行するときは[Benchmark](references/benchmark.md)を読み、Quickを再利用した候補実行、blind Judge、結果集計の順序に従う。
 
 ## 共通ルール
 
@@ -24,3 +26,4 @@ Quickを実行するときは[Quick scenario](references/quick.md)を読み、�
 - 機械判定できる問題は既存validatorを再利用し、意味評価だけをJudgeへ委ねる。
 - 元Fixtureやリポジトリを変更せず、最後に一時workspaceを必ず破棄する。
 - QuickではActor 1 + Judge 1を基本とし、多数決や観点別Judgeを追加しない。
+- Benchmarkは明示実行時だけ行い、Full scenario、複数回実行、pairwise Judge、Judge ensembleを追加しない。

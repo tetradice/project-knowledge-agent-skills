@@ -26,6 +26,8 @@ MARKER = ".project-knowledge-scenario-test.json"
 WORKSPACE_NAME = "workspace"
 DETERMINISTIC_RESULT = "deterministic.json"
 JUDGE_RESULT = "judge.json"
+BENCHMARK_RESULT = "benchmark.json"
+BENCHMARK_CONFIG = SKILL_ROOT / "agents" / "benchmark.yml"
 DIMENSIONS = (
     "correctness",
     "completeness",
@@ -46,12 +48,19 @@ def prepare(scenario: str) -> Path:
 
     if scenario != "quick-basic":
         raise ScenarioError(f"unsupported scenario: {scenario}")
+    # 期待値を含まない一時workspaceだけをActorへ渡す
+    run_root = Path(tempfile.gettempdir()).resolve() / f"pk-scenario-{uuid.uuid4().hex}"
+    return prepare_in(scenario, run_root)
+
+
+def prepare_in(scenario: str, run_root: Path) -> Path:
+    """指定したrun rootにQuick workspaceを準備する。"""
+
+    if scenario != "quick-basic":
+        raise ScenarioError(f"unsupported scenario: {scenario}")
     fixture = (SCENARIOS_ROOT / scenario / "fixture").resolve()
     if not fixture.is_dir():
         raise ScenarioError(f"fixture not found: {fixture}")
-
-    # 期待値を含まない一時workspaceだけをActorへ渡す
-    run_root = Path(tempfile.gettempdir()).resolve() / f"pk-scenario-{uuid.uuid4().hex}"
     workspace = run_root / WORKSPACE_NAME
     try:
         shutil.copytree(fixture, workspace)
@@ -71,6 +80,63 @@ def prepare(scenario: str) -> Path:
             shutil.rmtree(run_root)
         raise
     return workspace.resolve()
+
+
+def load_benchmark_config() -> dict[str, Any]:
+    """比較対象Actorと固定Judgeの設定を読み込む。"""
+
+    try:
+        config = yaml.safe_load(BENCHMARK_CONFIG.read_text(encoding="utf-8"))
+    except OSError as error:
+        raise ScenarioError(f"benchmark configuration unavailable: {error}") from error
+    if not isinstance(config, dict) or not isinstance(config.get("models"), list):
+        raise ScenarioError("benchmark configuration models are invalid")
+    models = config["models"]
+    valid_model = lambda model: isinstance(model, dict) and all(
+        isinstance(model.get(key), str) for key in ("id", "display_name", "model")
+    )
+    if not models or not all(valid_model(model) for model in models):
+        raise ScenarioError("benchmark model definitions are invalid")
+    if len({model["id"] for model in models}) != len(models):
+        raise ScenarioError("benchmark model ids must be unique")
+    judge = config.get("judge")
+    if not isinstance(judge, dict) or not isinstance(judge.get("model"), str):
+        raise ScenarioError("benchmark judge definition is invalid")
+    return config
+
+
+def unavailable_usage() -> dict[str, str]:
+    """実測APIがないusage項目を推定せず明示する。"""
+
+    return {key: "unavailable" for key in (
+        "input_tokens", "output_tokens", "total_tokens", "cached_input_tokens", "reasoning_tokens"
+    )}
+
+
+def prepare_benchmark(scenario: str) -> Path:
+    """同一Quick fixtureからモデルごとの隔離workspaceを準備する。"""
+
+    config = load_benchmark_config()
+    benchmark_root = Path(tempfile.gettempdir()).resolve() / f"pk-benchmark-{uuid.uuid4().hex}"
+    candidates: list[dict[str, Any]] = []
+    try:
+        for index, model in enumerate(config["models"]):
+            workspace = prepare_in(scenario, benchmark_root / model["id"])
+            candidates.append({
+                "id": f"Candidate {chr(ord('A') + index)}", "model_id": model["id"],
+                "model": model["model"], "display_name": model["display_name"],
+                "workspace": str(workspace), "actor_usage": unavailable_usage(),
+            })
+        write_json(benchmark_root / BENCHMARK_RESULT, {
+            "benchmark": "project-knowledge-quick", "single_run": True, "scenario": scenario,
+            "judge": config["judge"], "candidates": candidates,
+        })
+    except Exception:
+        if benchmark_root.is_dir():
+            make_tree_writable(benchmark_root)
+            shutil.rmtree(benchmark_root)
+        raise
+    return (benchmark_root / BENCHMARK_RESULT).resolve()
 
 
 def initialize_git(workspace: Path) -> None:
@@ -294,6 +360,113 @@ def collect_issues(
     return issues
 
 
+def knowledge_statistics(knowledge_root: Path) -> dict[str, int]:
+    """Judgeと独立したKnowledge Baseの参考統計を収集する。"""
+
+    docs = knowledge_root / "docs"
+    files = sorted(docs.rglob("*.md")) if docs.is_dir() else []
+    concepts = drafts = inferred = sources = characters = 0
+    for path in files:
+        text = path.read_text(encoding="utf-8")
+        characters += len(text)
+        metadata = read_frontmatter(path)
+        if not isinstance(metadata, dict):
+            continue
+        concepts += int(
+            metadata.get("pk_category") == "concept" or metadata.get("type") == "Concept"
+        )
+        drafts += int(metadata.get("pk_derivation") == "draft")
+        inferred += int(metadata.get("pk_derivation") == "inferred")
+        source_list = metadata.get("sources")
+        sources += len(source_list) if isinstance(source_list, list) else 0
+    return {
+        "concepts": concepts,
+        "knowledge_markdown_files": len(files),
+        "knowledge_characters": characters,
+        "sources": sources,
+        "draft_concepts": drafts,
+        "inferred_concepts": inferred,
+    }
+
+
+def quality_score(judge: dict[str, Any] | None) -> str:
+    """Quick JudgeのPASS数だけを100点換算した比較用Scoreを返す。"""
+
+    if judge is None:
+        return "unavailable"
+    passed = sum(judge["dimensions"][name]["result"] == "PASS" for name in DIMENSIONS)
+    return str(round(passed * 100 / len(DIMENSIONS)))
+
+
+def render_benchmark_report(payload: dict[str, Any]) -> str:
+    """単一実行Benchmarkを人間向けの比較表として整形する。"""
+
+    rows = payload["results"]
+    names = [row["display_name"] for row in rows]
+    lines = [
+        "Project Knowledge Model Benchmark",
+        f"Scenario: {payload['scenario']}",
+        "Runs per model: 1 (single-run benchmark)",
+        "",
+        "                         " + "  ".join(names),
+        "Deterministic             " + "  ".join(row["deterministic"] for row in rows),
+    ]
+    for dimension in DIMENSIONS:
+        values = [
+            row["judge"]["dimensions"][dimension]["result"] if row["judge"] else "SKIPPED"
+            for row in rows
+        ]
+        lines.append(f"{dimension:<25}" + "  ".join(values))
+    lines.append("Quality score              " + "  ".join(quality_score(row["judge"]) for row in rows))
+    for key, label in (("input_tokens", "Actor input tokens"), ("output_tokens", "Actor output tokens"), ("total_tokens", "Actor total tokens")):
+        lines.append(f"{label:<25}" + "  ".join(str(row["actor_usage"].get(key, "unavailable")) for row in rows))
+    for key, label in (("concepts", "Concepts"), ("knowledge_markdown_files", "Knowledge Markdown files"), ("knowledge_characters", "Knowledge chars"), ("sources", "Sources")):
+        lines.append(f"{label:<25}" + "  ".join(str(row["statistics"][key]) for row in rows))
+    scores = [(int(score), row["display_name"]) for row in rows if (score := quality_score(row["judge"])).isdigit()]
+    best = "unavailable" if not scores else ", ".join(name for score, name in scores if score == max(value for value, _ in scores))
+    lines.extend(["", f"Best quality: {best}", "Lowest actor token usage: unavailable (measured actor usage is unavailable)", "", "Candidate findings:"])
+    for row in rows:
+        lines.append(row["display_name"])
+        issues = collect_issues({"status": row["deterministic"], "findings": [], "error": None}, row["judge"], None)
+        if not issues:
+            lines.append("- no reported issues")
+        else:
+            lines.extend(f"- {issue['message']}" for issue in issues)
+    return "\n".join(lines)
+
+
+def benchmark_report(descriptor_path: Path) -> tuple[str, int]:
+    """各Quick実行の結果をモデル名へ復元して比較表示する。"""
+
+    descriptor = read_json(descriptor_path)
+    candidates = descriptor.get("candidates")
+    if not isinstance(candidates, list) or not candidates:
+        raise ScenarioError("benchmark candidates are invalid")
+    rows: list[dict[str, Any]] = []
+    for candidate in candidates:
+        if not isinstance(candidate, dict) or not isinstance(candidate.get("workspace"), str):
+            raise ScenarioError("benchmark candidate is invalid")
+        workspace = Path(candidate["workspace"])
+        _, exit_code = report(workspace)
+        run_root, _ = load_run(workspace)
+        deterministic = read_json(run_root / DETERMINISTIC_RESULT)
+        judge = None
+        if deterministic.get("status") == "PASS":
+            try:
+                judge = read_json(run_root / JUDGE_RESULT)
+                validate_judge(judge)
+            except ScenarioError:
+                pass
+        rows.append({
+            **candidate, "exit_code": exit_code,
+            "deterministic": deterministic.get("status", "ERROR"), "judge": judge,
+            "statistics": knowledge_statistics(workspace / "project-knowledge"),
+        })
+    payload = {**descriptor, "results": rows}
+    write_json(descriptor_path, payload)
+    return render_benchmark_report(payload), 0 if all(row["exit_code"] == 0 for row in rows) else 1
+
+
 def cleanup(workspace: Path) -> None:
     """markerで識別できる一時runだけを削除する。"""
 
@@ -433,6 +606,12 @@ def build_parser() -> argparse.ArgumentParser:
     for name in ("validate", "report", "cleanup"):
         command_parser = commands.add_parser(name)
         command_parser.add_argument("workspace", type=Path)
+    benchmark_parser = commands.add_parser("benchmark")
+    benchmark_commands = benchmark_parser.add_subparsers(dest="benchmark_command", required=True)
+    benchmark_prepare = benchmark_commands.add_parser("prepare")
+    benchmark_prepare.add_argument("scenario")
+    benchmark_report_parser = benchmark_commands.add_parser("report")
+    benchmark_report_parser.add_argument("descriptor", type=Path)
     return parser
 
 
@@ -455,6 +634,13 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if result["status"] == "PASS" else (2 if result["status"] == "ERROR" else 1)
         if args.command == "report":
             output, exit_code = report(args.workspace)
+            print(output)
+            return exit_code
+        if args.command == "benchmark":
+            if args.benchmark_command == "prepare":
+                print(prepare_benchmark(args.scenario))
+                return 0
+            output, exit_code = benchmark_report(args.descriptor)
             print(output)
             return exit_code
         cleanup(args.workspace)

@@ -225,6 +225,29 @@ def test_skill_contract_keeps_actor_and_judge_independent() -> None:
     assert len(RUNNER["DIMENSIONS"]) == 6
 
 
+def test_prepare_benchmark_reuses_isolated_quick_workspaces() -> None:
+    """Benchmarkが同じQuick Fixtureから候補ごとのworkspaceを作ることを確認する。"""
+
+    descriptor_path = RUNNER["prepare_benchmark"]("quick-basic")
+    try:
+        descriptor = RUNNER["read_json"](descriptor_path)
+        assert descriptor["single_run"] is True
+        assert [candidate["model_id"] for candidate in descriptor["candidates"]] == [
+            "luna",
+            "terra",
+            "sol",
+        ]
+        workspaces = [Path(candidate["workspace"]) for candidate in descriptor["candidates"]]
+        assert len(set(workspaces)) == 3
+        assert all((workspace / ".git").is_dir() for workspace in workspaces)
+        assert all(candidate["actor_usage"]["total_tokens"] == "unavailable" for candidate in descriptor["candidates"])
+    finally:
+        for candidate in RUNNER["read_json"](descriptor_path)["candidates"]:
+            RUNNER["cleanup"](Path(candidate["workspace"]))
+        descriptor_path.unlink()
+        descriptor_path.parent.rmdir()
+
+
 def test_runner_cli_reports_unsupported_scenario(capsys: pytest.CaptureFixture[str]) -> None:
     """Fullを暗黙にQuickとして実行しないことを確認する。"""
 
