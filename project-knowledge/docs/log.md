@@ -1,5 +1,12 @@
 # ナレッジ log
 
+## 2026-08-28
+
+### Largeライフサイクルシナリオを追加
+
+- Quickと同じ品質観点を人工Fixture、12 update、checkpoint Judge、step別のKnowledge規模とtoken usageで評価するLargeを記録した。
+- 実行結果として、全stepのdeterministic validation、checkpoint Judge score、Actor/Judge別credit、初期・最終Knowledge規模、既知のFixture規模制約を保存した。
+
 ## 2026-08-27
 
 ### 通常初期化の品質ゲートを追加
