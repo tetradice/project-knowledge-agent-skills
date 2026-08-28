@@ -1,0 +1,6 @@
+interface:
+  display_name: "Project Knowledge Benchmark"
+  short_description: "Project Knowledgeなし/ありで実務タスクをblind比較"
+  default_prompt: "Use $project-knowledge-benchmark to compare the same software engineering task without and with the current Project Knowledge."
+policy:
+  allow_implicit_invocation: false
