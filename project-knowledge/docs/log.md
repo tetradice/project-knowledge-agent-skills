@@ -2,6 +2,11 @@
 
 ## 2026-08-28
 
+### Quick / Benchmarkのcredit計測を統一
+
+- QuickとQuickベースBenchmarkのusage sourceをCodex session / rollout JSONLだけへ統一し、subagent sessionのbaseline差分とCodex creditsを記録した。
+- 既存single-run Benchmarkを再計測し、Actor creditsによる比較とJudge共通costの分離、取得不能時の`unavailable`契約を保存した。
+
 ### Largeライフサイクルシナリオを追加
 
 - Quickと同じ品質観点を人工Fixture、12 update、checkpoint Judge、step別のKnowledge規模とtoken usageで評価するLargeを記録した。
