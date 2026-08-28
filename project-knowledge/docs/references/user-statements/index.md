@@ -8,3 +8,4 @@
 - [indexにナレッジを置かない配置ルール](2026-08-26-index-content-boundary.md): reserved indexをナビゲーション専用にする理由とユーザー指示を確認するときに読む。
 - [Quickシナリオを使うモデルBenchmarkの方針](2026-08-27-model-benchmark.md): Quick再利用、比較対象、blind Judge、token usageの制約を確認するときに読む。
 - [Scenario testのusageとcredit計測方針](2026-08-28-scenario-credit-measurement.md): Quick / BenchmarkのJSONL由来usage、credits、取得不能時の扱いを確認するときに読む。
+- [Project Knowledge Utility Benchmarkの方針](2026-08-28-project-knowledge-utility-benchmark.md): 任意Git repositoryのNo-Knowledge / With-Knowledge比較、隔離、評価、結果保持の要件を確認するときに読む。

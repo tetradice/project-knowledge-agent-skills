@@ -2,6 +2,11 @@
 
 ## 2026-08-28
 
+### Project Knowledge Utility Benchmarkを追加
+
+- 任意Git repositoryの同一TaskをNo-Knowledge / With-Knowledgeで比較する明示実行Skill、worktree隔離、blind Judge、JSONL由来usage / AI Credit、結果artifact保持を記録した。
+- README表記検証Taskのsingle-runでは両条件の機械評価がPASSし、JudgeはWith-Knowledge側を僅差で選好した。単一小Taskの観測を一般的効果として扱わない境界を保存した。
+
 ### Quick / Benchmarkのcredit計測を統一
 
 - QuickとQuickベースBenchmarkのusage sourceをCodex session / rollout JSONLだけへ統一し、subagent sessionのbaseline差分とCodex creditsを記録した。
