@@ -66,6 +66,35 @@ def valid_judge() -> dict[str, object]:
     return {"result": "PASS", "dimensions": dimensions, "issues": []}
 
 
+def available_measurement(total_credits: float) -> dict[str, object]:
+    """Runner統合テスト用の実測済みmeasurementを作成する。"""
+
+    return {
+        "usage_status": "available",
+        "usage": {
+            "input_tokens": 100,
+            "cached_input_tokens": 80,
+            "output_tokens": 5,
+            "reasoning_output_tokens": 2,
+            "total_tokens": 105,
+        },
+        "credits": {
+            "uncached_input": 0.1,
+            "cached_input": 0.04,
+            "output": 0.15,
+            "total": total_credits,
+        },
+        "credit_rate": {"checked_at": "2026-08-28"},
+        "measurement": {
+            "source": "codex-session-jsonl",
+            "session_id": "test-session",
+            "rollout_file": "rollout-test-session.jsonl",
+            "status": "available",
+            "reason": None,
+        },
+    }
+
+
 def test_prepare_isolates_fixture_and_initializes_git() -> None:
     """prepareが元Fixtureを変えずにGit workspaceを作ることを確認する。"""
 
@@ -235,6 +264,57 @@ def test_report_rejects_inconsistent_judge_result() -> None:
         RUNNER["cleanup"](workspace)
 
 
+def test_quick_report_displays_recorded_actor_and_judge_credits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Quick reportが品質結果と独立して役割別creditsを表示・保存する。"""
+
+    workspace = prepare()
+    try:
+        RUNNER["write_json"](
+            workspace.parent / RUNNER["DETERMINISTIC_RESULT"],
+            {"status": "PASS", "findings": [], "error": None},
+        )
+        RUNNER["write_json"](workspace.parent / RUNNER["JUDGE_RESULT"], valid_judge())
+        RUNNER["record_session"](
+            workspace,
+            "actor",
+            "actor-session",
+            "/root/quick_actor",
+            parent_session_id="parent-session",
+        )
+        RUNNER["record_session"](
+            workspace,
+            "judge",
+            "judge-session",
+            "/root/quick_judge",
+            parent_session_id="parent-session",
+        )
+
+        def fake_measurement(reference: dict[str, str], _: dict[str, object]) -> dict[str, object]:
+            """agent pathに応じた固定creditを返す。"""
+
+            return available_measurement(
+                0.29 if reference["agent_path"].endswith("actor") else 0.11
+            )
+
+        monkeypatch.setitem(
+            RUNNER["report"].__globals__, "measure_session", fake_measurement
+        )
+        output, exit_code = RUNNER["report"](workspace)
+        metadata = RUNNER["read_json"](workspace.parent / RUNNER["MARKER"])
+
+        assert exit_code == 0
+        assert "Usage measurement: AVAILABLE" in output
+        assert "Actor: 0.29" in output
+        assert "Judge: 0.11" in output
+        assert "Total (measured): 0.4" in output
+        assert metadata["measured_total_credits"] == 0.4
+        assert metadata["measurement_results"]["actor"]["usage"]["total_tokens"] == 105
+    finally:
+        RUNNER["cleanup"](workspace)
+
+
 def test_cleanup_refuses_unmarked_directory(tmp_path: Path) -> None:
     """markerのないディレクトリをcleanupしないことを確認する。"""
 
@@ -262,6 +342,8 @@ def test_skill_contract_keeps_actor_and_judge_independent() -> None:
     assert "reasoning_effort: low" in skill
     assert "fork_turns: none" in skill
     assert "expectations.yml" not in quick.split("3. Actor終了後", 1)[0]
+    assert "app-server" in skill
+    assert "session record" in quick
     assert set(expectations) == {
         "scenario",
         "required_knowledge",
@@ -287,6 +369,75 @@ def test_prepare_benchmark_reuses_isolated_quick_workspaces() -> None:
         assert len(set(workspaces)) == 3
         assert all((workspace / ".git").is_dir() for workspace in workspaces)
         assert all(candidate["actor_usage"]["total_tokens"] == "unavailable" for candidate in descriptor["candidates"])
+        assert all(candidate["actor_session"] is None for candidate in descriptor["candidates"])
+    finally:
+        for candidate in RUNNER["read_json"](descriptor_path)["candidates"]:
+            RUNNER["cleanup"](Path(candidate["workspace"]))
+        descriptor_path.unlink()
+        descriptor_path.parent.rmdir()
+
+
+def test_benchmark_compares_actor_credits_and_separates_judge_cost(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Benchmarkの最低コストをActor creditsで判定しJudgeを別集計する。"""
+
+    descriptor_path = RUNNER["prepare_benchmark"]("quick-basic")
+    credit_by_model = {
+        "gpt-5.6-luna": 0.8,
+        "gpt-5.6-terra": 7.2,
+        "gpt-5.6-sol": 15.4,
+    }
+    try:
+        descriptor = RUNNER["read_json"](descriptor_path)
+        for candidate in descriptor["candidates"]:
+            workspace = Path(candidate["workspace"])
+            RUNNER["write_json"](
+                workspace.parent / RUNNER["DETERMINISTIC_RESULT"],
+                {"status": "PASS", "findings": [], "error": None},
+            )
+            RUNNER["write_json"](workspace.parent / RUNNER["JUDGE_RESULT"], valid_judge())
+            RUNNER["record_session"](
+                descriptor_path,
+                "actor",
+                f"{candidate['model_id']}-actor-session",
+                f"/root/{candidate['model_id']}_actor",
+                candidate["model_id"],
+                "parent-session",
+            )
+            RUNNER["record_session"](
+                descriptor_path,
+                "judge",
+                f"{candidate['model_id']}-judge-session",
+                f"/root/{candidate['model_id']}_judge",
+                candidate["model_id"],
+                "parent-session",
+            )
+
+        def fake_measurement(
+            reference: dict[str, str] | None, _: dict[str, object]
+        ) -> dict[str, object]:
+            """Candidate marker未記録分とBenchmark記録分を区別する。"""
+
+            if reference is None:
+                return RUNNER["unavailable_measurement"]("session-not-recorded")
+            if reference["agent_path"].endswith("judge"):
+                return available_measurement(0.1)
+            return available_measurement(credit_by_model[reference["model"]])
+
+        monkeypatch.setitem(
+            RUNNER["benchmark_report"].__globals__, "measure_session", fake_measurement
+        )
+        output, exit_code = RUNNER["benchmark_report"](descriptor_path)
+        result = RUNNER["read_json"](descriptor_path)
+
+        assert exit_code == 0
+        assert "Lowest credits: GPT-5.6 Luna" in output
+        assert "Judge credits: 0.3" in output
+        assert "Benchmark total credits: 23.7" in output
+        assert result["actor_credits"] == 23.4
+        assert result["judge_credits"] == pytest.approx(0.3)
+        assert result["benchmark_total_credits"] == 23.7
     finally:
         for candidate in RUNNER["read_json"](descriptor_path)["candidates"]:
             RUNNER["cleanup"](Path(candidate["workspace"]))

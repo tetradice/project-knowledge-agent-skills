@@ -11,18 +11,27 @@
    - 依頼文: `このプロジェクトのProject Knowledgeを初期構築してください。`
    - workspaceをプロジェクトrootとして、指定Skillとそこから参照される必要なReference・scriptを通常どおり使うこと
    - workspace外のシナリオ、期待値、テスト実装を読まないこと
-3. Actor終了後、`uv run --with pyyaml <runner> validate <workspace>`を実行する。既存validatorに加えて、通常Conceptが1件以上あることと、そのConceptがworkspace内に実在する`project-artifact`を1件以上参照することを検査する。骨組みだけのBundleは`missing-concept`と`missing-project-artifact-source`でFAILとする。
-4. validationがFAILまたはERRORならJudgeを起動しない。`report`でJudgeを`SKIPPED`として表示する。
-5. validationがPASSなら、JudgeをActorとは別に`model: gpt-5.6-luna`、`reasoning_effort: low`、`fork_turns: none`で起動する。Judgeには次だけを与える。
+3. Actor終了後、spawn結果のsession/thread IDとcanonical agent pathを`uv run --with pyyaml <runner> session record <workspace> actor <session-id> --agent-path <agent-path>`で記録する。prepare時に`CODEX_THREAD_ID`を取得できなかった場合だけ、`--parent-session-id <orchestrator-session-id>`も指定する。Actorにusageを自己申告させない。
+4. `uv run --with pyyaml <runner> validate <workspace>`を実行する。既存validatorに加えて、通常Conceptが1件以上あることと、そのConceptがworkspace内に実在する`project-artifact`を1件以上参照することを検査する。骨組みだけのBundleは`missing-concept`と`missing-project-artifact-source`でFAILとする。
+5. validationがFAILまたはERRORならJudgeを起動しない。`report`でJudgeを`SKIPPED`として表示する。
+6. validationがPASSなら、JudgeをActorとは別に`model: gpt-5.6-luna`、`reasoning_effort: low`、`fork_turns: none`で起動する。Judgeには次だけを与える。
    - source projectであるworkspace。ただし`project-knowledge/`を除く
    - Actorが生成した`<workspace>/project-knowledge/`
    - `<skill-root>/scenarios/quick-basic/expectations.yml`
    - 下記JSON契約と評価規則
    - 出力先`<workspaceの親>/judge.json`
-6. Judgeには読み取り専用で評価させ、`judge.json`だけを書かせる。Actorの会話や判断過程は渡さない。
-7. Judge JSONが不正な場合だけ、同じJudgeへ形式修正を1回依頼する。評価のやり直しや別Judgeの起動は行わない。
-8. `uv run --with pyyaml <runner> report <workspace>`を実行し、標準出力をそのままユーザーへ報告する。
-9. 成否にかかわらず、最後に`uv run --with pyyaml <runner> cleanup <workspace>`を実行する。cleanup失敗も報告する。
+7. Judgeには読み取り専用で評価させ、`judge.json`だけを書かせる。Actorの会話や判断過程は渡さない。Judge終了後はActorと同様に`session record <workspace> judge <session-id> --agent-path <agent-path>`で識別子を記録する。
+8. Judge JSONが不正な場合だけ、同じJudgeへ形式修正を1回依頼する。評価のやり直しや別Judgeの起動は行わない。
+9. `uv run --with pyyaml <runner> report <workspace>`を実行し、品質結果、Actor/Judge別credits、raw usage、計測状態を含む標準出力をそのままユーザーへ報告する。
+10. 成否にかかわらず、最後に`uv run --with pyyaml <runner> cleanup <workspace>`を実行する。cleanup失敗も報告する。
+
+## Usageとcredits
+
+RunnerはCodex homeを`CODEX_HOME`、未設定ならユーザーhomeの`.codex`として解決し、`sessions/**/rollout-*<session-id>*.jsonl`を探索する。ファイル名の時刻や最新ファイルでは選ばず、`session_meta`のsession ID、parent thread ID、agent pathと`turn_context`のmodelを記録値へ照合する。絶対パスは結果へ保存せず、rolloutファイル名だけを残す。
+
+`token_count`の最初の`total_token_usage - last_token_usage`をsession開始前baselineとし、最後の`total_token_usage - baseline`を対象subagent固有のraw usageとする。累積値や重複した`last_token_usage`を合計しない。必須field欠落、破損、値の後退、識別子不一致では推測せず`unavailable`とし、シナリオ品質のPASS/FAILは変えない。
+
+creditsは`agents/credit-rates.yml`を使い、`input_tokens - cached_input_tokens`、cached input、`output_tokens`をそれぞれのrateで換算する。`reasoning_output_tokens`はraw内訳として保持するだけで、outputへ二重加算しない。app-server、Responses API、その他usage source、token単価、通貨換算は使用しない。
 
 ## Judge JSON契約
 

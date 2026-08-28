@@ -20,6 +20,17 @@ from urllib.parse import urlparse
 
 import yaml
 
+SCRIPT_ROOT = Path(__file__).resolve().parent
+if str(SCRIPT_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_ROOT))
+
+from session_usage import (
+    load_credit_rates,
+    measure_session,
+    unavailable_measurement,
+    unavailable_usage,
+)
+
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 SCENARIOS_ROOT = SKILL_ROOT / "scenarios"
 PROJECT_KNOWLEDGE_ROOT = SKILL_ROOT.parent / "project-knowledge"
@@ -30,6 +41,7 @@ DETERMINISTIC_RESULT = "deterministic.json"
 JUDGE_RESULT = "judge.json"
 BENCHMARK_RESULT = "benchmark.json"
 BENCHMARK_CONFIG = SKILL_ROOT / "agents" / "benchmark.yml"
+CREDIT_RATES_CONFIG = SKILL_ROOT / "agents" / "credit-rates.yml"
 UTILITY_RESULT = "utility.json"
 UTILITY_CONFIG = SKILL_ROOT / "agents" / "utility.yml"
 UTILITY_MARKER = ".project-knowledge-utility-benchmark.json"
@@ -85,6 +97,8 @@ def prepare_in(scenario: str, run_root: Path) -> Path:
             "fixture_hash": tree_hash(fixture),
             "workspace_source_hash": tree_hash(workspace, MANAGED_SOURCE_NAMES),
             "workspace": str(workspace.resolve()),
+            "orchestrator_session_id": os.environ.get("CODEX_THREAD_ID", "unavailable"),
+            "sessions": {"actor": None, "judge": None},
         }
         write_json(run_root / MARKER, metadata)
         initialize_git(workspace)
@@ -118,14 +132,6 @@ def load_benchmark_config() -> dict[str, Any]:
     if not isinstance(judge, dict) or not isinstance(judge.get("model"), str):
         raise ScenarioError("benchmark judge definition is invalid")
     return config
-
-
-def unavailable_usage() -> dict[str, str]:
-    """実測APIがないusage項目を推定せず明示する。"""
-
-    return {key: "unavailable" for key in (
-        "input_tokens", "output_tokens", "total_tokens", "cached_input_tokens", "reasoning_tokens"
-    )}
 
 
 def load_utility_config() -> dict[str, Any]:
@@ -567,10 +573,12 @@ def prepare_benchmark(scenario: str) -> Path:
                 "id": f"Candidate {chr(ord('A') + index)}", "model_id": model["id"],
                 "model": model["model"], "display_name": model["display_name"],
                 "workspace": str(workspace), "actor_usage": unavailable_usage(),
+                "actor_session": None, "judge_session": None,
             })
         write_json(benchmark_root / BENCHMARK_RESULT, {
             "benchmark": "project-knowledge-quick", "single_run": True, "scenario": scenario,
             "judge": config["judge"], "candidates": candidates,
+            "orchestrator_session_id": os.environ.get("CODEX_THREAD_ID", "unavailable"),
         })
     except Exception:
         if benchmark_root.is_dir():
@@ -578,6 +586,80 @@ def prepare_benchmark(scenario: str) -> Path:
             shutil.rmtree(benchmark_root)
         raise
     return (benchmark_root / BENCHMARK_RESULT).resolve()
+
+
+def record_session(
+    target: Path,
+    role: str,
+    session_id: str,
+    agent_path: str,
+    candidate_id: str | None = None,
+    parent_session_id: str | None = None,
+) -> dict[str, Any]:
+    """ActorまたはJudgeのsubagent session識別子をrunへ記録する。"""
+
+    if role not in {"actor", "judge"}:
+        raise ScenarioError(f"unsupported session role: {role}")
+    if target.is_dir():
+        run_root, metadata = load_run(target)
+        model = load_benchmark_config()["judge"]["model"]
+        reference = build_session_reference(
+            metadata, model, session_id, agent_path, parent_session_id
+        )
+        sessions = metadata.setdefault("sessions", {"actor": None, "judge": None})
+        store_session_reference(sessions, role, reference)
+        write_json(run_root / MARKER, metadata)
+        return reference
+
+    descriptor = read_json(target)
+    candidates = descriptor.get("candidates")
+    if not isinstance(candidates, list) or not isinstance(candidate_id, str):
+        raise ScenarioError("benchmark candidate id is required")
+    candidate = next(
+        (
+            item for item in candidates
+            if isinstance(item, dict) and item.get("model_id") == candidate_id
+        ),
+        None,
+    )
+    if candidate is None:
+        raise ScenarioError(f"benchmark candidate not found: {candidate_id}")
+    model = candidate["model"] if role == "actor" else descriptor["judge"]["model"]
+    reference = build_session_reference(
+        descriptor, model, session_id, agent_path, parent_session_id
+    )
+    store_session_reference(candidate, f"{role}_session", reference)
+    write_json(target, descriptor)
+    return reference
+
+
+def build_session_reference(
+    container: dict[str, Any],
+    model: str,
+    session_id: str,
+    agent_path: str,
+    parent_session_id: str | None,
+) -> dict[str, str]:
+    """session照合に必要な識別子をまとめる。"""
+
+    parent = parent_session_id or container.get("orchestrator_session_id")
+    return {
+        "session_id": session_id,
+        "parent_session_id": parent if isinstance(parent, str) else "unavailable",
+        "agent_path": agent_path,
+        "model": model,
+    }
+
+
+def store_session_reference(
+    container: dict[str, Any], key: str, reference: dict[str, str]
+) -> None:
+    """異なるsessionで既存対応を暗黙に上書きしない。"""
+
+    existing = container.get(key)
+    if existing is not None and existing != reference:
+        raise ScenarioError(f"session reference already recorded: {key}")
+    container[key] = reference
 
 
 def initialize_git(workspace: Path) -> None:
@@ -734,10 +816,79 @@ def find_outside_sources(knowledge_root: Path, workspace: Path) -> list[dict[str
     return findings
 
 
+def measure_quick_sessions(
+    metadata: dict[str, Any], deterministic_status: str
+) -> dict[str, dict[str, Any]]:
+    """QuickのActor、Judge、Orchestratorを役割別に計測する。"""
+
+    try:
+        rates = load_credit_rates(CREDIT_RATES_CONFIG)
+    except (TypeError, ValueError) as error:
+        unavailable = unavailable_measurement(str(error))
+        return {"actor": unavailable, "judge": unavailable, "orchestrator": unavailable}
+    sessions = metadata.get("sessions")
+    actor_reference = sessions.get("actor") if isinstance(sessions, dict) else None
+    judge_reference = sessions.get("judge") if isinstance(sessions, dict) else None
+    actor = measure_session(actor_reference, rates)
+    judge = (
+        measure_session(judge_reference, rates)
+        if deterministic_status == "PASS"
+        else unavailable_measurement("judge-not-run")
+    )
+    orchestrator = unavailable_measurement(
+        "independent-orchestrator-usage-unavailable",
+        metadata.get("orchestrator_session_id")
+        if isinstance(metadata.get("orchestrator_session_id"), str)
+        else None,
+    )
+    return {"actor": actor, "judge": judge, "orchestrator": orchestrator}
+
+
+def combined_credits(measurements: list[dict[str, Any]]) -> float | int | str:
+    """すべて実測できた役割だけを合計し、欠落時は推測しない。"""
+
+    if not measurements or any(
+        item.get("measurement", {}).get("status") != "available" for item in measurements
+    ):
+        return "unavailable"
+    return round(sum(float(item["credits"]["total"]) for item in measurements), 12)
+
+
+def format_credit(value: Any) -> str:
+    """credit値またはunavailableを表示用に整形する。"""
+
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return "unavailable"
+    return f"{value:.6f}".rstrip("0").rstrip(".")
+
+
+def render_quick_credits(
+    measurements: dict[str, dict[str, Any]], deterministic_status: str
+) -> list[str]:
+    """Quickの役割別creditsと計測状態を表示する。"""
+
+    actor_value = measurements["actor"]["credits"]["total"]
+    judge_expected = deterministic_status == "PASS"
+    judge_value = measurements["judge"]["credits"]["total"]
+    expected = [measurements["actor"]]
+    if judge_expected:
+        expected.append(measurements["judge"])
+    status = "AVAILABLE" if combined_credits(expected) != "unavailable" else "UNAVAILABLE"
+    total = combined_credits(expected)
+    return [
+        f"Usage measurement: {status}",
+        "Credits:",
+        f"  Actor: {format_credit(actor_value)}",
+        f"  Judge: {format_credit(judge_value) if judge_expected else 'not run'}",
+        "  Orchestrator: unavailable",
+        f"  Total (measured): {format_credit(total)}",
+    ]
+
+
 def report(workspace: Path) -> tuple[str, int]:
     """deterministic結果とJudge結果を人間向けに集約する。"""
 
-    run_root, _ = load_run(workspace)
+    run_root, metadata = load_run(workspace)
     deterministic = read_json(run_root / DETERMINISTIC_RESULT)
     deterministic_status = deterministic.get("status", "ERROR")
     judge: dict[str, Any] | None = None
@@ -752,6 +903,15 @@ def report(workspace: Path) -> tuple[str, int]:
     overall_pass = deterministic_status == "PASS" and judge_error is None
     if judge is not None:
         overall_pass = overall_pass and judge["result"] == "PASS"
+
+    # 品質結果と独立してsession JSONL由来のusageを計測
+    measurements = measure_quick_sessions(metadata, deterministic_status)
+    metadata["measurement_results"] = measurements
+    metadata["measured_total_credits"] = combined_credits(
+        [measurements["actor"]]
+        + ([measurements["judge"]] if deterministic_status == "PASS" else [])
+    )
+    write_json(run_root / MARKER, metadata)
 
     lines = [
         "Project Knowledge Quick Scenario Test",
@@ -771,6 +931,7 @@ def report(workspace: Path) -> tuple[str, int]:
         for dimension in DIMENSIONS:
             lines.append(f"  {dimension}: {judge['dimensions'][dimension]['result']}")
 
+    lines.extend(["", *render_quick_credits(measurements, deterministic_status)])
     issues = collect_issues(deterministic, judge, judge_error)
     lines.extend(["", "Issues:"])
     if not issues:
@@ -895,6 +1056,8 @@ def render_benchmark_report(payload: dict[str, Any]) -> str:
         "Project Knowledge Model Benchmark",
         f"Scenario: {payload['scenario']}",
         "Runs per model: 1 (single-run benchmark)",
+        f"Credit rates: {payload['credit_rate']['source']}",
+        f"Rate checked: {payload['credit_rate']['checked_at']}",
         "",
         "                         " + "  ".join(names),
         "Deterministic             " + "  ".join(row["deterministic"] for row in rows),
@@ -906,13 +1069,47 @@ def render_benchmark_report(payload: dict[str, Any]) -> str:
         ]
         lines.append(f"{dimension:<25}" + "  ".join(values))
     lines.append("Quality score              " + "  ".join(quality_score(row["judge"]) for row in rows))
-    for key, label in (("input_tokens", "Actor input tokens"), ("output_tokens", "Actor output tokens"), ("total_tokens", "Actor total tokens")):
+    lines.append(
+        "Actor credits            "
+        + "  ".join(format_credit(row["actor_measurement"]["credits"]["total"]) for row in rows)
+    )
+    for key, label in (
+        ("input_tokens", "Actor input tokens"),
+        ("cached_input_tokens", "Actor cached tokens"),
+        ("output_tokens", "Actor output tokens"),
+        ("reasoning_output_tokens", "Actor reasoning tokens"),
+        ("total_tokens", "Actor total tokens"),
+    ):
         lines.append(f"{label:<25}" + "  ".join(str(row["actor_usage"].get(key, "unavailable")) for row in rows))
     for key, label in (("concepts", "Concepts"), ("knowledge_markdown_files", "Knowledge Markdown files"), ("knowledge_characters", "Knowledge chars"), ("sources", "Sources")):
         lines.append(f"{label:<25}" + "  ".join(str(row["statistics"][key]) for row in rows))
     scores = [(int(score), row["display_name"]) for row in rows if (score := quality_score(row["judge"])).isdigit()]
     best = "unavailable" if not scores else ", ".join(name for score, name in scores if score == max(value for value, _ in scores))
-    lines.extend(["", f"Best quality: {best}", "Lowest actor token usage: unavailable (measured actor usage is unavailable)", "", "Candidate findings:"])
+    credit_values = [
+        (float(value), row["display_name"])
+        for row in rows
+        if isinstance(
+            (value := row["actor_measurement"]["credits"]["total"]), (int, float)
+        )
+        and not isinstance(value, bool)
+    ]
+    lowest = (
+        "unavailable"
+        if len(credit_values) != len(rows)
+        else ", ".join(
+            name for value, name in credit_values
+            if value == min(item[0] for item in credit_values)
+        )
+    )
+    lines.extend([
+        "",
+        f"Best quality: {best}",
+        f"Lowest credits: {lowest}",
+        f"Judge credits: {format_credit(payload['judge_credits'])}",
+        f"Benchmark total credits: {format_credit(payload['benchmark_total_credits'])}",
+        "",
+        "Candidate findings:",
+    ])
     for row in rows:
         lines.append(row["display_name"])
         issues = collect_issues({"status": row["deterministic"], "findings": [], "error": None}, row["judge"], None)
@@ -930,6 +1127,13 @@ def benchmark_report(descriptor_path: Path) -> tuple[str, int]:
     candidates = descriptor.get("candidates")
     if not isinstance(candidates, list) or not candidates:
         raise ScenarioError("benchmark candidates are invalid")
+    try:
+        rates = load_credit_rates(CREDIT_RATES_CONFIG)
+        rate_metadata = {"source": rates["source"], "checked_at": rates["checked_at"]}
+    except (TypeError, ValueError) as error:
+        rates = None
+        rate_metadata = {"source": "unavailable", "checked_at": "unavailable"}
+        rate_error = str(error)
     rows: list[dict[str, Any]] = []
     for candidate in candidates:
         if not isinstance(candidate, dict) or not isinstance(candidate.get("workspace"), str):
@@ -945,12 +1149,42 @@ def benchmark_report(descriptor_path: Path) -> tuple[str, int]:
                 validate_judge(judge)
             except ScenarioError:
                 pass
+        actor_measurement = (
+            measure_session(candidate.get("actor_session"), rates)
+            if rates is not None
+            else unavailable_measurement(rate_error)
+        )
+        judge_measurement = (
+            (
+                measure_session(candidate.get("judge_session"), rates)
+                if rates is not None
+                else unavailable_measurement(rate_error)
+            )
+            if deterministic.get("status") == "PASS"
+            else unavailable_measurement("judge-not-run")
+        )
         rows.append({
             **candidate, "exit_code": exit_code,
             "deterministic": deterministic.get("status", "ERROR"), "judge": judge,
             "statistics": knowledge_statistics(workspace / "project-knowledge"),
+            "actor_usage": actor_measurement["usage"],
+            "actor_measurement": actor_measurement,
+            "judge_measurement": judge_measurement,
         })
-    payload = {**descriptor, "results": rows}
+    actor_measurements = [row["actor_measurement"] for row in rows]
+    judge_measurements = [
+        row["judge_measurement"] for row in rows if row["deterministic"] == "PASS"
+    ]
+    payload = {
+        **descriptor,
+        "credit_rate": rate_metadata,
+        "results": rows,
+        "actor_credits": combined_credits(actor_measurements),
+        "judge_credits": combined_credits(judge_measurements),
+        "benchmark_total_credits": combined_credits(
+            actor_measurements + judge_measurements
+        ),
+    }
     write_json(descriptor_path, payload)
     return render_benchmark_report(payload), 0 if all(row["exit_code"] == 0 for row in rows) else 1
 
@@ -1094,6 +1328,15 @@ def build_parser() -> argparse.ArgumentParser:
     for name in ("validate", "report", "cleanup"):
         command_parser = commands.add_parser(name)
         command_parser.add_argument("workspace", type=Path)
+    session_parser = commands.add_parser("session")
+    session_commands = session_parser.add_subparsers(dest="session_command", required=True)
+    session_record = session_commands.add_parser("record")
+    session_record.add_argument("target", type=Path)
+    session_record.add_argument("role", choices=("actor", "judge"))
+    session_record.add_argument("session_id")
+    session_record.add_argument("--agent-path", required=True)
+    session_record.add_argument("--candidate")
+    session_record.add_argument("--parent-session-id")
     benchmark_parser = commands.add_parser("benchmark")
     benchmark_commands = benchmark_parser.add_subparsers(dest="benchmark_command", required=True)
     benchmark_prepare = benchmark_commands.add_parser("prepare")
@@ -1134,6 +1377,17 @@ def main(argv: list[str] | None = None) -> int:
             output, exit_code = report(args.workspace)
             print(output)
             return exit_code
+        if args.command == "session":
+            reference = record_session(
+                args.target,
+                args.role,
+                args.session_id,
+                args.agent_path,
+                args.candidate,
+                args.parent_session_id,
+            )
+            print(json.dumps(reference, ensure_ascii=False, indent=2))
+            return 0
         if args.command == "benchmark":
             if args.benchmark_command == "prepare":
                 print(prepare_benchmark(args.scenario))

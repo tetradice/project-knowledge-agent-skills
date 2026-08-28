@@ -21,7 +21,7 @@ Utilityを実行するときは[Utility Benchmark](references/utility.md)を読�
 
 ## 共通ルール
 
-- Quick / Model BenchmarkのActorとJudgeは従来どおり別の`gpt-5.6-luna`サブエージェントとし、`reasoning_effort: low`、`fork_turns: none`で起動する。UtilityのTask / Judgeモデルは`agents/utility.yml`だけで定義する。
+- QuickのActorとJudgeは従来どおり別の`gpt-5.6-luna`サブエージェントとし、`reasoning_effort: low`、`fork_turns: none`で起動する。Model BenchmarkのActorとJudgeは`agents/benchmark.yml`、UtilityのTask / Judgeは`agents/utility.yml`だけで定義する。
 - ActorへJudgeの期待値、採点観点、`expectations.yml`の場所を渡さない。
 - JudgeへActorの会話、判断過程、プロンプトを渡さない。
 - Actorには開発中checkoutの`project-knowledge` Skillを通常どおり実行させ、テスト専用の生成手順へ置き換えない。
@@ -30,3 +30,5 @@ Utilityを実行するときは[Utility Benchmark](references/utility.md)を読�
 - QuickではActor 1 + Judge 1を基本とし、多数決や観点別Judgeを追加しない。
 - Benchmarkは明示実行時だけ行い、Full scenario、複数回実行、pairwise Judge、Judge ensembleを追加しない。
 - Utilityも明示実行時だけ行い、QuickやBenchmarkから自動起動しない。single-runの観測結果を統計的効果として断定しない。
+- QuickとModel Benchmarkのusageは、記録したsubagent session IDに対応するCodex rollout JSONLだけから計測する。Actorへ自己申告させず、app-serverやusage APIへfallbackしない。正確に対応付けまたはbaseline算出できなければ、品質結果とは独立して`unavailable`とする。
+- コスト比較は`agents/credit-rates.yml`の基準日つきCodex credit rateを使い、token数や通貨換算をコスト指標にしない。
