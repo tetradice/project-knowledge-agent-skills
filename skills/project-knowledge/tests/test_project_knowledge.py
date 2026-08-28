@@ -240,6 +240,26 @@ def test_skill_contract_exposes_maintenance_operations() -> None:
         assert (SKILL_ROOT / "references" / reference).is_file()
 
 
+def test_update_contract_keeps_conversation_summaries_evidence_rich() -> None:
+    """会話記録が結論だけの要約へ退行しないことを固定する。"""
+
+    update = (SKILL_ROOT / "references" / "update.md").read_text(encoding="utf-8")
+
+    for marker in (
+        "結論だけに圧縮しない",
+        "問題の発生から解決または中断までの時系列",
+        "判断・制約",
+        "実施した調査または操作",
+        "観測された結果・エラー",
+        "採用または却下した対応",
+        "検証結果",
+        "未解決または未検証の境界",
+        "全文保存が明示された場合",
+        "Raw Referenceとして原文を保存する",
+    ):
+        assert marker in update
+
+
 def test_init_contract_distinguishes_normal_and_empty_initialization() -> None:
     """通常初期化が調査と根拠付きConcept生成まで行う契約を固定する。"""
 
