@@ -14,6 +14,7 @@ RUNNER_PATH = SKILL_ROOT / "scripts" / "scenario_test.py"
 RUNNER = runpy.run_path(str(RUNNER_PATH))
 INIT = SKILLS_ROOT / "project-knowledge" / "scripts" / "init_project.py"
 FIXTURE = SKILL_ROOT / "scenarios" / "quick-basic" / "fixture"
+LARGE_FIXTURE = SKILL_ROOT / "scenarios" / "large-lifecycle" / "fixture" / "initial"
 
 
 def prepare() -> Path:
@@ -336,10 +337,14 @@ def test_skill_contract_keeps_actor_and_judge_independent() -> None:
             encoding="utf-8"
         )
     )
+    scenarios = yaml.safe_load(
+        (SKILL_ROOT / "agents" / "scenarios.yml").read_text(encoding="utf-8")
+    )
 
     assert agent["policy"]["allow_implicit_invocation"] is False
-    assert skill.count("gpt-5.6-luna") == 1
-    assert "reasoning_effort: low" in skill
+    assert scenarios["quick-basic"] == scenarios["large-lifecycle"]
+    assert scenarios["quick-basic"]["actor"]["model"] == "gpt-5.6-luna"
+    assert "agents/scenarios.yml" in skill
     assert "fork_turns: none" in skill
     assert "expectations.yml" not in quick.split("3. Actor終了後", 1)[0]
     assert "app-server" in skill
@@ -351,6 +356,150 @@ def test_skill_contract_keeps_actor_and_judge_independent() -> None:
         "expected_properties",
     }
     assert len(RUNNER["DIMENSIONS"]) == 6
+
+
+def test_prepare_large_isolates_versioned_fixture_and_lifecycle() -> None:
+    """Largeが十分な初期Sourceと12 Change Setを隔離して準備する。"""
+
+    fixture_hash = RUNNER["tree_hash"](LARGE_FIXTURE)
+    descriptor_path = RUNNER["prepare_large"]("large-lifecycle")
+    try:
+        descriptor = RUNNER["read_json"](descriptor_path)
+        workspace = Path(descriptor["workspace"])
+
+        assert descriptor["scenario_version"] == "1"
+        assert descriptor["fixture_version"] == "1"
+        assert descriptor["execution_mode"] == "normal"
+        assert descriptor["fixture"]["files"] >= 35
+        assert len(descriptor["change_sets"]) == 12
+        assert descriptor["judge_checkpoints"] == ["initial", "update-06", "update-12"]
+        assert (workspace / ".git").is_dir()
+        assert not (workspace.parent / "expectations.yml").exists()
+        assert RUNNER["tree_hash"](LARGE_FIXTURE) == fixture_hash
+    finally:
+        RUNNER["cleanup_large"](descriptor_path)
+
+
+def test_large_applies_all_change_sets_as_independent_commits() -> None:
+    """追加・変更・削除・移動を含む12 updateを順序どおりcommitする。"""
+
+    descriptor_path = RUNNER["prepare_large"]("large-lifecycle")
+    try:
+        initial_descriptor = RUNNER["read_json"](descriptor_path)
+        initial_workspace = Path(initial_descriptor["workspace"])
+        initialize_knowledge(initial_workspace)
+        add_concept(initial_workspace)
+        for expected in range(1, 13):
+            descriptor = RUNNER["read_json"](descriptor_path)
+            descriptor["steps"][-1]["validation"] = {
+                "status": "PASS", "findings": [], "error": None
+            }
+            RUNNER["write_json"](descriptor_path, descriptor)
+            step = RUNNER["advance_large"](descriptor_path)
+            assert step["step"] == f"update-{expected:02d}"
+            assert step["changed_files"] > 0
+            assert step["changed_bytes"] > 0
+
+        descriptor = RUNNER["read_json"](descriptor_path)
+        workspace = Path(descriptor["workspace"])
+        assert not (workspace / "docs" / "archive" / "v1-routing.md").exists()
+        assert (
+            workspace / "backend" / "notifications" / "src" / "workers" / "delivery.py"
+        ).is_file()
+        assert (
+            workspace / "backend" / "payments" / "src" / "reconciliation.py"
+        ).is_file()
+        commits = subprocess.run(
+            ["git", "rev-list", "--count", "HEAD"],
+            cwd=workspace,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert commits.returncode == 0
+        assert commits.stdout.strip() == "14"
+    finally:
+        RUNNER["cleanup_large"](descriptor_path)
+
+
+def test_large_validation_records_knowledge_growth_statistics() -> None:
+    """Large validationがQuick共通検査とKnowledge統計をstepへ保存する。"""
+
+    descriptor_path = RUNNER["prepare_large"]("large-lifecycle")
+    try:
+        descriptor = RUNNER["read_json"](descriptor_path)
+        workspace = Path(descriptor["workspace"])
+        initialize_knowledge(workspace)
+        add_concept(workspace)
+
+        step = RUNNER["validate_large"](descriptor_path)
+
+        assert step["validation"]["status"] == "PASS"
+        assert step["knowledge"]["concepts"] >= 1
+        assert step["knowledge"]["knowledge_markdown_files"] >= 1
+        assert step["repository"]["files"] >= 35
+    finally:
+        RUNNER["cleanup_large"](descriptor_path)
+
+
+def test_large_report_separates_actor_and_judge_tokens(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Large reportがstep別Actor/Judge tokenを分離して集計する。"""
+
+    descriptor_path = RUNNER["prepare_large"]("large-lifecycle")
+    try:
+        descriptor = RUNNER["read_json"](descriptor_path)
+        descriptor["change_sets"] = []
+        descriptor["steps"][0]["validation"] = {
+            "status": "PASS", "findings": [], "error": None
+        }
+        descriptor["steps"][0]["knowledge"] = {
+            "concepts": 40,
+            "knowledge_markdown_files": 48,
+            "knowledge_characters": 60000,
+            "sources": 72,
+            "draft_concepts": 2,
+            "inferred_concepts": 3,
+        }
+        RUNNER["write_json"](descriptor_path, descriptor)
+        RUNNER["record_session"](
+            descriptor_path, "actor", "large-actor", "/root/large_actor", step_id="initial"
+        )
+        RUNNER["record_session"](
+            descriptor_path, "judge", "large-judge", "/root/large_judge", step_id="initial"
+        )
+        RUNNER["write_json"](
+            RUNNER["large_judge_path"](descriptor_path, "initial"), valid_judge()
+        )
+
+        def fake_measurement(
+            reference: dict[str, str] | None, _: dict[str, object]
+        ) -> dict[str, object]:
+            """ActorとJudgeに異なるtoken値を返す。"""
+
+            assert reference is not None
+            value = available_measurement(0.1)
+            value["usage"]["total_tokens"] = (
+                1000 if reference["agent_path"].endswith("actor") else 200
+            )
+            return value
+
+        monkeypatch.setitem(
+            RUNNER["large_report"].__globals__, "measure_session", fake_measurement
+        )
+        output, exit_code = RUNNER["large_report"](descriptor_path)
+        result = RUNNER["read_json"](descriptor_path)
+
+        assert exit_code == 0
+        assert "Result: PASS" in output
+        assert "Initial score: 100" in output
+        assert result["steps"][0]["actor_usage"]["total_tokens"] == 1000
+        assert result["steps"][0]["judge_usage"]["total_tokens"] == 200
+        assert result["summary"]["tokens"]["cumulative_actor"] == 1000
+        assert result["summary"]["tokens"]["judge_total"] == 200
+    finally:
+        RUNNER["cleanup_large"](descriptor_path)
 
 
 def test_prepare_benchmark_reuses_isolated_quick_workspaces() -> None:

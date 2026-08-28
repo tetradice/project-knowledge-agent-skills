@@ -5,7 +5,7 @@
 ## 実行手順
 
 1. Skill rootを基準にrunnerを特定し、`uv run --with pyyaml <skill-root>/scripts/scenario_test.py prepare quick-basic`を実行する。標準出力の絶対パスがActor用workspaceである。
-2. Actorを`model: gpt-5.6-luna`、`reasoning_effort: low`、`fork_turns: none`で起動する。次の情報だけを与える。
+2. Actorを`agents/scenarios.yml`の`quick-basic.actor`設定、`fork_turns: none`で起動する。次の情報だけを与える。
    - workspaceの絶対パス
    - `<skill-root>/../project-knowledge/SKILL.md`の絶対パス
    - 依頼文: `このプロジェクトのProject Knowledgeを初期構築してください。`
@@ -14,7 +14,7 @@
 3. Actor終了後、spawn結果のsession/thread IDとcanonical agent pathを`uv run --with pyyaml <runner> session record <workspace> actor <session-id> --agent-path <agent-path>`で記録する。prepare時に`CODEX_THREAD_ID`を取得できなかった場合だけ、`--parent-session-id <orchestrator-session-id>`も指定する。Actorにusageを自己申告させない。
 4. `uv run --with pyyaml <runner> validate <workspace>`を実行する。既存validatorに加えて、通常Conceptが1件以上あることと、そのConceptがworkspace内に実在する`project-artifact`を1件以上参照することを検査する。骨組みだけのBundleは`missing-concept`と`missing-project-artifact-source`でFAILとする。
 5. validationがFAILまたはERRORならJudgeを起動しない。`report`でJudgeを`SKIPPED`として表示する。
-6. validationがPASSなら、JudgeをActorとは別に`model: gpt-5.6-luna`、`reasoning_effort: low`、`fork_turns: none`で起動する。Judgeには次だけを与える。
+6. validationがPASSなら、JudgeをActorとは別に`agents/scenarios.yml`の`quick-basic.judge`設定、`fork_turns: none`で起動する。Judgeには次だけを与える。
    - source projectであるworkspace。ただし`project-knowledge/`を除く
    - Actorが生成した`<workspace>/project-knowledge/`
    - `<skill-root>/scenarios/quick-basic/expectations.yml`

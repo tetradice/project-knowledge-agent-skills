@@ -1,0 +1,33 @@
+id: update-12
+size: medium
+summary: Add payment reconciliation and its daily operational rule.
+operations:
+  - action: write
+    path: backend/payments/src/reconciliation.py
+    content: |
+      """Payment reconciliation contract."""
+
+      MAX_AUTOMATIC_DIFFERENCE_MINOR = 1
+
+      def needs_review(expected: int, settled: int) -> bool:
+          """Escalate material differences for human review."""
+          return abs(expected - settled) > MAX_AUTOMATIC_DIFFERENCE_MINOR
+  - action: write
+    path: backend/payments/tests/test_reconciliation.py
+    content: |
+      from payments.src.reconciliation import needs_review
+
+      def test_material_difference_requires_review() -> None:
+          assert needs_review(100, 98)
+  - action: write
+    path: scripts/run_reconciliation.py
+    content: |
+      """Daily reconciliation entry point."""
+
+      SCHEDULE_UTC = "02:00"
+  - action: write
+    path: docs/operations/reconciliation.md
+    content: |
+      # Payment reconciliation
+
+      Reconciliation runs daily at 02:00 UTC. Differences of one minor unit or less are recorded automatically; larger differences create a finance review item. Operators must not edit order totals to force a match.

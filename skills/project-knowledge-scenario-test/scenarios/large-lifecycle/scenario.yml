@@ -1,0 +1,7 @@
+scenario: large-lifecycle
+scenario_version: "1"
+fixture_version: "1"
+judge_checkpoints:
+  - initial
+  - update-06
+  - update-12

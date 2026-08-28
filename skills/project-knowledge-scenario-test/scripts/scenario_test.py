@@ -15,6 +15,7 @@ import sys
 import tempfile
 import uuid
 from pathlib import Path
+from statistics import median
 from typing import Any
 from urllib.parse import urlparse
 
@@ -46,6 +47,11 @@ UTILITY_RESULT = "utility.json"
 UTILITY_CONFIG = SKILL_ROOT / "agents" / "utility.yml"
 UTILITY_MARKER = ".project-knowledge-utility-benchmark.json"
 UTILITY_SCENARIO = "utility-basic"
+SCENARIO_CONFIG = SKILL_ROOT / "agents" / "scenarios.yml"
+LARGE_RESULT = "large.json"
+LARGE_SCENARIO = "large-lifecycle"
+LARGE_SCENARIO_CONFIG = SCENARIOS_ROOT / LARGE_SCENARIO / "scenario.yml"
+LARGE_OPERATIONS = {"write", "delete", "move"}
 UTILITY_CONDITIONS = ("no_kb", "with_kb")
 UTILITY_DIMENSIONS = (
     "requirement_compliance",
@@ -90,7 +96,11 @@ def prepare_in(scenario: str, run_root: Path) -> Path:
         raise ScenarioError(f"fixture not found: {fixture}")
     workspace = run_root / WORKSPACE_NAME
     try:
-        shutil.copytree(fixture, workspace)
+        shutil.copytree(
+            fixture,
+            workspace,
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo"),
+        )
         metadata = {
             "scenario": scenario,
             "fixture": str(fixture),
@@ -109,6 +119,173 @@ def prepare_in(scenario: str, run_root: Path) -> Path:
             shutil.rmtree(run_root)
         raise
     return workspace.resolve()
+
+
+def load_scenario_agent_config(scenario: str) -> dict[str, Any]:
+    """QuickとLargeで共通利用するActor/Judge設定を読み込む。"""
+
+    try:
+        config = yaml.safe_load(SCENARIO_CONFIG.read_text(encoding="utf-8"))
+    except OSError as error:
+        raise ScenarioError(f"scenario agent configuration unavailable: {error}") from error
+    scenario_config = config.get(scenario) if isinstance(config, dict) else None
+    if not isinstance(scenario_config, dict):
+        raise ScenarioError(f"scenario agent configuration not found: {scenario}")
+    for role in ("actor", "judge"):
+        role_config = scenario_config.get(role)
+        if not isinstance(role_config, dict) or not all(
+            isinstance(role_config.get(key), str)
+            for key in ("model", "reasoning_effort")
+        ):
+            raise ScenarioError(f"scenario {role} configuration is invalid: {scenario}")
+    return scenario_config
+
+
+def load_large_scenario() -> dict[str, Any]:
+    """Large Fixtureとlifecycleのversion管理された定義を読み込む。"""
+
+    try:
+        config = yaml.safe_load(LARGE_SCENARIO_CONFIG.read_text(encoding="utf-8"))
+    except OSError as error:
+        raise ScenarioError(f"large scenario configuration unavailable: {error}") from error
+    if not isinstance(config, dict):
+        raise ScenarioError("large scenario configuration is invalid")
+    required_strings = ("scenario", "scenario_version", "fixture_version")
+    if not all(isinstance(config.get(key), str) for key in required_strings):
+        raise ScenarioError("large scenario versions are invalid")
+    if config["scenario"] != LARGE_SCENARIO:
+        raise ScenarioError(f"unsupported large scenario: {config['scenario']}")
+    checkpoints = config.get("judge_checkpoints")
+    if not string_list(checkpoints):
+        raise ScenarioError("large judge checkpoints are invalid")
+    return config
+
+
+def prepare_large(scenario: str) -> Path:
+    """Large Fixtureを隔離し、lifecycle descriptorを準備する。"""
+
+    if scenario != LARGE_SCENARIO:
+        raise ScenarioError(f"unsupported large scenario: {scenario}")
+    config = load_large_scenario()
+    load_scenario_agent_config(scenario)
+    fixture = (SCENARIOS_ROOT / scenario / "fixture" / "initial").resolve()
+    changes_root = (SCENARIOS_ROOT / scenario / "changes").resolve()
+    if not fixture.is_dir() or not changes_root.is_dir():
+        raise ScenarioError("large fixture or changes not found")
+    change_sets = load_change_sets(changes_root)
+    run_root = Path(tempfile.gettempdir()).resolve() / f"pk-large-{uuid.uuid4().hex}"
+    workspace = run_root / WORKSPACE_NAME
+    try:
+        # Actorへ期待値やchange set本体を渡さず、初期Sourceだけを複製
+        shutil.copytree(fixture, workspace)
+        initialize_git(workspace)
+        source_hash = tree_hash(workspace, MANAGED_SOURCE_NAMES)
+        marker = {
+            "scenario": scenario,
+            "fixture": str(fixture),
+            "fixture_hash": tree_hash(fixture),
+            "workspace_source_hash": source_hash,
+            "workspace": str(workspace.resolve()),
+            "orchestrator_session_id": os.environ.get("CODEX_THREAD_ID", "unavailable"),
+            "sessions": {"actor": None, "judge": None},
+        }
+        write_json(run_root / MARKER, marker)
+        (run_root / "judges").mkdir()
+        initial = build_large_step("initial", "init", None, True, workspace)
+        descriptor = {
+            "benchmark": "project-knowledge-large",
+            "execution_mode": "normal",
+            "single_run": True,
+            "scenario": scenario,
+            "scenario_version": config["scenario_version"],
+            "fixture_version": config["fixture_version"],
+            "workspace": str(workspace.resolve()),
+            "fixture": {
+                "path": str(fixture),
+                "hash": marker["fixture_hash"],
+                **repository_statistics(workspace),
+            },
+            "change_sets": change_sets,
+            "judge_checkpoints": config["judge_checkpoints"],
+            "current_step": "initial",
+            "steps": [initial],
+            "orchestrator_session_id": marker["orchestrator_session_id"],
+            "summary": None,
+        }
+        write_json(run_root / LARGE_RESULT, descriptor)
+    except Exception:
+        if run_root.is_dir():
+            make_tree_writable(run_root)
+            shutil.rmtree(run_root)
+        raise
+    return (run_root / LARGE_RESULT).resolve()
+
+
+def load_change_sets(changes_root: Path) -> list[dict[str, Any]]:
+    """順序付きChange Set manifestを検証して読み込む。"""
+
+    change_sets: list[dict[str, Any]] = []
+    for path in sorted(changes_root.glob("*.yml")):
+        value = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if not isinstance(value, dict) or not all(
+            isinstance(value.get(key), str) for key in ("id", "size", "summary")
+        ):
+            raise ScenarioError(f"invalid change set: {path}")
+        operations = value.get("operations")
+        if not isinstance(operations, list) or not operations:
+            raise ScenarioError(f"change set has no operations: {path}")
+        for operation in operations:
+            validate_change_operation(operation, path)
+        change_sets.append({
+            "id": value["id"],
+            "size": value["size"],
+            "summary": value["summary"],
+            "manifest": str(path.resolve()),
+        })
+    if len(change_sets) < 10:
+        raise ScenarioError("large scenario requires at least 10 change sets")
+    if len({item["id"] for item in change_sets}) != len(change_sets):
+        raise ScenarioError("large change set ids must be unique")
+    return change_sets
+
+
+def validate_change_operation(operation: Any, path: Path) -> None:
+    """Change Set operationの必須項目と種別を検査する。"""
+
+    if not isinstance(operation, dict) or operation.get("action") not in LARGE_OPERATIONS:
+        raise ScenarioError(f"invalid change operation: {path}")
+    action = operation["action"]
+    required = {"write": ("path", "content"), "delete": ("path",), "move": ("from", "to")}
+    if not all(isinstance(operation.get(key), str) for key in required[action]):
+        raise ScenarioError(f"invalid {action} operation: {path}")
+
+
+def build_large_step(
+    step_id: str,
+    operation: str,
+    change_set: dict[str, Any] | None,
+    checkpoint: bool,
+    workspace: Path,
+) -> dict[str, Any]:
+    """step別machine-readable resultの初期値を構築する。"""
+
+    return {
+        "step": step_id,
+        "operation": operation,
+        "change_set": change_set,
+        "judge_checkpoint": checkpoint,
+        "changed_files": 0,
+        "changed_bytes": 0,
+        "repository": repository_statistics(workspace),
+        "validation": None,
+        "quality_score": "unavailable",
+        "knowledge": None,
+        "actor_session": None,
+        "judge_session": None,
+        "actor_usage": unavailable_usage(),
+        "judge_usage": unavailable_usage(),
+        "issues": [],
+    }
 
 
 def load_benchmark_config() -> dict[str, Any]:
@@ -595,6 +772,7 @@ def record_session(
     agent_path: str,
     candidate_id: str | None = None,
     parent_session_id: str | None = None,
+    step_id: str | None = None,
 ) -> dict[str, Any]:
     """ActorまたはJudgeのsubagent session識別子をrunへ記録する。"""
 
@@ -602,7 +780,7 @@ def record_session(
         raise ScenarioError(f"unsupported session role: {role}")
     if target.is_dir():
         run_root, metadata = load_run(target)
-        model = load_benchmark_config()["judge"]["model"]
+        model = load_scenario_agent_config(metadata["scenario"])[role]["model"]
         reference = build_session_reference(
             metadata, model, session_id, agent_path, parent_session_id
         )
@@ -612,6 +790,10 @@ def record_session(
         return reference
 
     descriptor = read_json(target)
+    if descriptor.get("benchmark") == "project-knowledge-large":
+        return record_large_session(
+            target, descriptor, role, session_id, agent_path, parent_session_id, step_id
+        )
     candidates = descriptor.get("candidates")
     if not isinstance(candidates, list) or not isinstance(candidate_id, str):
         raise ScenarioError("benchmark candidate id is required")
@@ -630,6 +812,28 @@ def record_session(
     )
     store_session_reference(candidate, f"{role}_session", reference)
     write_json(target, descriptor)
+    return reference
+
+
+def record_large_session(
+    descriptor_path: Path,
+    descriptor: dict[str, Any],
+    role: str,
+    session_id: str,
+    agent_path: str,
+    parent_session_id: str | None,
+    step_id: str | None,
+) -> dict[str, str]:
+    """Largeのoperation単位でActor/Judge sessionを記録する。"""
+
+    selected_step = step_id or descriptor.get("current_step")
+    step = find_large_step(descriptor, selected_step)
+    model = load_scenario_agent_config(descriptor["scenario"])[role]["model"]
+    reference = build_session_reference(
+        descriptor, model, session_id, agent_path, parent_session_id
+    )
+    store_session_reference(step, f"{role}_session", reference)
+    write_json(descriptor_path, descriptor)
     return reference
 
 
@@ -687,6 +891,162 @@ def initialize_git(workspace: Path) -> None:
         if result.returncode != 0:
             detail = result.stderr.strip() or result.stdout.strip()
             raise ScenarioError(f"Git initialization failed: {detail}")
+
+
+def advance_large(descriptor_path: Path) -> dict[str, Any]:
+    """次のChange Setを適用して独立commitを作成する。"""
+
+    descriptor = load_large_descriptor(descriptor_path)
+    workspace = Path(descriptor["workspace"])
+    current = find_large_step(descriptor, descriptor["current_step"])
+    if not isinstance(current.get("validation"), dict):
+        raise ScenarioError(f"current large step is not validated: {current['step']}")
+    completed_updates = sum(step["operation"] == "update" for step in descriptor["steps"])
+    if completed_updates >= len(descriptor["change_sets"]):
+        raise ScenarioError("large scenario has no remaining change set")
+    checkpoint_large_actor(workspace, current["step"])
+    change_set = descriptor["change_sets"][completed_updates]
+    changed_files, changed_bytes = apply_change_set(workspace, Path(change_set["manifest"]))
+    commit_change_set(workspace, change_set["id"], completed_updates + 1)
+
+    # 次stepで正当なSource変更だけを許容するためexpected hashを更新
+    marker_path = descriptor_path.parent / MARKER
+    marker = read_json(marker_path)
+    marker["workspace_source_hash"] = tree_hash(workspace, MANAGED_SOURCE_NAMES)
+    marker["sessions"] = {"actor": None, "judge": None}
+    write_json(marker_path, marker)
+    checkpoint = change_set["id"] in descriptor["judge_checkpoints"]
+    step = build_large_step(change_set["id"], "update", change_set, checkpoint, workspace)
+    step["changed_files"] = changed_files
+    step["changed_bytes"] = changed_bytes
+    descriptor["steps"].append(step)
+    descriptor["current_step"] = change_set["id"]
+    write_json(descriptor_path, descriptor)
+    return step
+
+
+def apply_change_set(workspace: Path, manifest_path: Path) -> tuple[int, int]:
+    """宣言的Change Setをworkspace内だけへ適用する。"""
+
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    operations = manifest["operations"]
+    touched: set[Path] = set()
+    changed_bytes = 0
+    for operation in operations:
+        action = operation["action"]
+        paths = [operation.get("path")] if action != "move" else [operation["from"], operation["to"]]
+        targets = [safe_large_target(workspace, value) for value in paths if isinstance(value, str)]
+        before = sum(target.stat().st_size for target in targets if target.is_file())
+        if action == "write":
+            target = targets[0]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(operation["content"], encoding="utf-8", newline="\n")
+            touched.add(target)
+        elif action == "delete":
+            target = targets[0]
+            if not target.is_file():
+                raise ScenarioError(f"change set delete target not found: {target}")
+            target.unlink()
+            touched.add(target)
+        else:
+            source, target = targets
+            if not source.is_file():
+                raise ScenarioError(f"change set move source not found: {source}")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            source.replace(target)
+            touched.update({source, target})
+        after = sum(target.stat().st_size for target in targets if target.is_file())
+        changed_bytes += before + after
+    return len(touched), changed_bytes
+
+
+def safe_large_target(workspace: Path, relative: str) -> Path:
+    """Change Set pathをSource領域内の安全な相対pathへ限定する。"""
+
+    candidate = (workspace / relative).resolve()
+    if (
+        not is_within(candidate, workspace.resolve())
+        or candidate == workspace.resolve()
+        or any(part in {".git", "project-knowledge"} for part in Path(relative).parts)
+    ):
+        raise ScenarioError(f"unsafe large change target: {relative}")
+    return candidate
+
+
+def ensure_clean_git(workspace: Path) -> None:
+    """Change Set適用前に前operationがcommit済みであることを保証する。"""
+
+    result = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=workspace,
+        capture_output=True, text=True, check=False,
+    )
+    if result.returncode != 0 or result.stdout.strip():
+        detail = result.stderr.strip() or result.stdout.strip() or "git status failed"
+        raise ScenarioError(f"large workspace must be clean before advance: {detail}")
+
+
+def checkpoint_large_actor(workspace: Path, step_id: str) -> None:
+    """検証済みKnowledgeだけをcommitし、次updateのGit baselineを確定する。"""
+
+    changed = git_changed_paths(workspace)
+    allowed = [
+        path for path in changed
+        if path in {"AGENTS.md", ".gitignore"} or path.startswith("project-knowledge/")
+    ]
+    unexpected = sorted(set(changed) - set(allowed))
+    if unexpected:
+        raise ScenarioError(
+            f"large actor changed source files before checkpoint: {', '.join(unexpected)}"
+        )
+    if allowed:
+        commands = (
+            ("git", "add", "--", "AGENTS.md", ".gitignore", "project-knowledge"),
+            ("git", "commit", "--quiet", "-m", f"Checkpoint knowledge {step_id}"),
+        )
+        for command in commands:
+            result = subprocess.run(
+                command, cwd=workspace, capture_output=True, text=True, check=False
+            )
+            if result.returncode != 0:
+                detail = result.stderr.strip() or result.stdout.strip()
+                raise ScenarioError(f"large knowledge checkpoint failed: {detail}")
+
+    # state.ymlはlocal cacheなのでKnowledge commit後のHEADへ進める
+    detector = PROJECT_KNOWLEDGE_ROOT / "scripts" / "detect_changes.py"
+    result = subprocess.run(
+        [sys.executable, str(detector), str(workspace), "--write-baseline"],
+        capture_output=True, text=True, check=False,
+    )
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip()
+        raise ScenarioError(f"large baseline update failed: {detail}")
+    ensure_clean_git(workspace)
+
+
+def commit_change_set(workspace: Path, change_id: str, sequence: int) -> None:
+    """Change Setを再現可能な日時の独立commitとして保存する。"""
+
+    environment = os.environ.copy()
+    environment["GIT_AUTHOR_DATE"] = f"2026-08-{27 + (sequence // 24):02d}T{sequence % 24:02d}:00:00+09:00"
+    environment["GIT_COMMITTER_DATE"] = environment["GIT_AUTHOR_DATE"]
+    for command in (("git", "add", "-A"), ("git", "commit", "--quiet", "-m", f"Apply {change_id}")):
+        result = subprocess.run(
+            command, cwd=workspace, env=environment,
+            capture_output=True, text=True, check=False,
+        )
+        if result.returncode != 0:
+            detail = result.stderr.strip() or result.stdout.strip()
+            raise ScenarioError(f"large change commit failed: {detail}")
+
+
+def repository_statistics(workspace: Path) -> dict[str, int]:
+    """Knowledge領域とGit管理情報を除いたSource規模を計測する。"""
+
+    files = [
+        path for path in workspace.rglob("*")
+        if path.is_file() and not any(part in MANAGED_SOURCE_NAMES for part in path.parts)
+    ]
+    return {"files": len(files), "characters": sum(len(path.read_text(encoding="utf-8")) for path in files)}
 
 
 def validate(workspace: Path) -> dict[str, Any]:
@@ -951,6 +1311,260 @@ def report(workspace: Path) -> tuple[str, int]:
     return "\n".join(lines), exit_code
 
 
+def validate_large(descriptor_path: Path) -> dict[str, Any]:
+    """現在のLarge stepを共通validatorで検査し規模推移を保存する。"""
+
+    descriptor = load_large_descriptor(descriptor_path)
+    workspace = Path(descriptor["workspace"])
+    step = find_large_step(descriptor, descriptor["current_step"])
+    result = validate(workspace)
+    step["validation"] = result
+    step["knowledge"] = knowledge_statistics(workspace / "project-knowledge")
+    step["repository"] = repository_statistics(workspace)
+    step["issues"] = collect_issues(result, None, None)
+    write_json(descriptor_path, descriptor)
+    return step
+
+
+def large_report(descriptor_path: Path) -> tuple[str, int]:
+    """Large lifecycleのstep結果、品質、token usageを集約する。"""
+
+    descriptor = load_large_descriptor(descriptor_path)
+    rates_error: str | None = None
+    try:
+        rates = load_credit_rates(CREDIT_RATES_CONFIG)
+    except (TypeError, ValueError) as error:
+        rates = {}
+        rates_error = str(error)
+    validation_error = False
+    judge_error = False
+    for step in descriptor["steps"]:
+        validation = step.get("validation")
+        validation_status = validation.get("status") if isinstance(validation, dict) else "ERROR"
+        validation_error = validation_error or validation_status != "PASS"
+        actor = (
+            measure_session(step.get("actor_session"), rates)
+            if rates_error is None
+            else unavailable_measurement(rates_error)
+        )
+        step["actor_measurement"] = actor
+        step["actor_usage"] = actor["usage"]
+        judge: dict[str, Any] | None = None
+        step_judge_error: str | None = None
+        if step["judge_checkpoint"] and validation_status == "PASS":
+            try:
+                judge = read_json(large_judge_path(descriptor_path, step["step"]))
+                validate_judge(judge)
+            except ScenarioError as error:
+                step_judge_error = str(error)
+            judge_measurement = (
+                measure_session(step.get("judge_session"), rates)
+                if rates_error is None
+                else unavailable_measurement(rates_error)
+            )
+            step["judge_measurement"] = judge_measurement
+            step["judge_usage"] = judge_measurement["usage"]
+            judge_error = judge_error or step_judge_error is not None or (
+                judge is not None and judge["result"] != "PASS"
+            )
+        else:
+            step["judge_measurement"] = unavailable_measurement("judge-not-run")
+            step["judge_usage"] = unavailable_usage()
+        step["quality_score"] = quality_score(judge)
+        step["issues"] = collect_issues(
+            validation if isinstance(validation, dict) else {
+                "status": "ERROR", "findings": [], "error": "step-not-validated"
+            },
+            judge,
+            step_judge_error,
+        )
+
+    completed_updates = sum(step["operation"] == "update" for step in descriptor["steps"])
+    lifecycle_complete = completed_updates == len(descriptor["change_sets"])
+    overall_pass = lifecycle_complete and not validation_error and not judge_error
+    descriptor["summary"] = build_large_summary(descriptor, lifecycle_complete)
+    descriptor["summary"]["result"] = "PASS" if overall_pass else "FAIL"
+    write_json(descriptor_path, descriptor)
+    output = render_large_report(descriptor)
+    if not lifecycle_complete or any(
+        not isinstance(step.get("validation"), dict) for step in descriptor["steps"]
+    ):
+        return output, 2
+    return output, 0 if overall_pass else 1
+
+
+def build_large_summary(
+    descriptor: dict[str, Any], lifecycle_complete: bool
+) -> dict[str, Any]:
+    """Largeのmachine-readable最終集計を構築する。"""
+
+    steps = descriptor["steps"]
+    actor_values = [usage_integer(step["actor_usage"], "total_tokens") for step in steps]
+    judge_values = [
+        usage_integer(step["judge_usage"], "total_tokens")
+        for step in steps if step["judge_checkpoint"]
+    ]
+    update_values = [
+        usage_integer(step["actor_usage"], "total_tokens")
+        for step in steps if step["operation"] == "update"
+    ]
+    checkpoint_scores = [
+        int(step["quality_score"])
+        for step in steps if step["quality_score"] != "unavailable"
+    ]
+    available_actor = all(value is not None for value in actor_values)
+    available_updates = all(value is not None for value in update_values)
+    available_judges = all(value is not None for value in judge_values)
+    largest = max(
+        (step for step in steps if step["operation"] == "update"),
+        key=lambda step: step["changed_bytes"],
+        default=None,
+    )
+    largest_tokens = (
+        usage_integer(largest["actor_usage"], "total_tokens") if largest else None
+    )
+    return {
+        "lifecycle_complete": lifecycle_complete,
+        "initial_builds": 1,
+        "updates": sum(step["operation"] == "update" for step in steps),
+        "validation": {
+            "initial": validation_status(steps[0]),
+            "final": validation_status(steps[-1]),
+        },
+        "quality": {
+            "initial": steps[0]["quality_score"],
+            "final": steps[-1]["quality_score"],
+            "lowest_checkpoint": min(checkpoint_scores) if checkpoint_scores else "unavailable",
+        },
+        "tokens": {
+            "initial_build": actor_values[0] if actor_values[0] is not None else "unavailable",
+            "updates_total": sum(update_values) if available_updates else "unavailable",
+            "cumulative_actor": sum(actor_values) if available_actor else "unavailable",
+            "average_update": round(sum(update_values) / len(update_values)) if available_updates and update_values else "unavailable",
+            "median_update": round(median(update_values)) if available_updates and update_values else "unavailable",
+            "maximum_update": max(update_values) if available_updates and update_values else "unavailable",
+            "judge_total": sum(judge_values) if available_judges else "unavailable",
+            "orchestrator": "unavailable",
+        },
+        "largest_update": {
+            "step": largest["step"] if largest else "unavailable",
+            "changed_files": largest["changed_files"] if largest else "unavailable",
+            "changed_bytes": largest["changed_bytes"] if largest else "unavailable",
+            "actor_tokens": largest_tokens if largest_tokens is not None else "unavailable",
+        },
+        "issues": [
+            {"step": step["step"], **issue}
+            for step in steps for issue in step["issues"]
+        ],
+    }
+
+
+def render_large_report(descriptor: dict[str, Any]) -> str:
+    """Large summaryを人間向けに整形する。"""
+
+    steps = descriptor["steps"]
+    initial = steps[0]
+    final = steps[-1]
+    summary = descriptor["summary"]
+    tokens = summary["tokens"]
+    lines = [
+        "Project Knowledge Large Scenario",
+        "",
+        f"Result: {summary['result']}",
+        "",
+        "Fixture:",
+        f"  Version: {descriptor['fixture_version']}",
+        f"  Source files: {descriptor['fixture']['files']}",
+        f"  Initial source characters: {descriptor['fixture']['characters']}",
+        "",
+        "Lifecycle:",
+        "  Initial build: 1",
+        f"  Updates: {summary['updates']} / {len(descriptor['change_sets'])}",
+        "",
+        "Validation:",
+        f"  Initial: {summary['validation']['initial']}",
+        f"  Final: {summary['validation']['final']}",
+        "",
+        "Quality:",
+        f"  Initial score: {summary['quality']['initial']}",
+        f"  Final score: {summary['quality']['final']}",
+        f"  Lowest checkpoint score: {summary['quality']['lowest_checkpoint']}",
+        "",
+        "Knowledge:",
+        "                         Initial      Final",
+    ]
+    for label, key in (
+        ("Concepts", "concepts"), ("Markdown files", "knowledge_markdown_files"),
+        ("Knowledge chars", "knowledge_characters"), ("Sources", "sources"),
+        ("Draft concepts", "draft_concepts"), ("Inferred concepts", "inferred_concepts"),
+    ):
+        initial_value = initial["knowledge"].get(key, 0) if isinstance(initial["knowledge"], dict) else 0
+        final_value = final["knowledge"].get(key, 0) if isinstance(final["knowledge"], dict) else 0
+        lines.append(f"  {label:<20} {initial_value:>8} {final_value:>10}")
+    lines.extend([
+        "",
+        "Actor tokens:",
+        f"  Init: {tokens['initial_build']}",
+        f"  Updates total: {tokens['updates_total']}",
+        f"  Cumulative: {tokens['cumulative_actor']}",
+        f"  Average update: {tokens['average_update']}",
+        f"  Median update: {tokens['median_update']}",
+        f"  Maximum update: {tokens['maximum_update']}",
+        f"  Judge total: {tokens['judge_total']}",
+        "  Orchestrator: unavailable",
+        "",
+        "Largest source change:",
+        f"  Step: {summary['largest_update']['step']}",
+        f"  Changed files: {summary['largest_update']['changed_files']}",
+        f"  Changed bytes: {summary['largest_update']['changed_bytes']}",
+        f"  Actor tokens: {summary['largest_update']['actor_tokens']}",
+        "",
+        "Steps:",
+        "  step | operation | changed files | changed bytes | validation | quality | actor tokens | judge tokens",
+    ])
+    for step in steps:
+        lines.append(
+            f"  {step['step']} | {step['operation']} | {step['changed_files']} | "
+            f"{step['changed_bytes']} | {validation_status(step)} | {step['quality_score']} | "
+            f"{usage_display(step['actor_usage'])} | {usage_display(step['judge_usage'])}"
+        )
+    lines.extend(["", "Observed issues:"])
+    if summary["issues"]:
+        lines.extend(
+            f"  - [{issue['step']}] {issue['message']}" for issue in summary["issues"]
+        )
+    else:
+        lines.append("  none")
+    return "\n".join(lines)
+
+
+def usage_integer(usage: Any, key: str) -> int | None:
+    """推定せず実測済みtoken整数だけを返す。"""
+
+    value = usage.get(key) if isinstance(usage, dict) else None
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def usage_display(usage: Any) -> str:
+    """step表へtoken値またはunavailableを表示する。"""
+
+    value = usage_integer(usage, "total_tokens")
+    return str(value) if value is not None else "unavailable"
+
+
+def validation_status(step: dict[str, Any]) -> str:
+    """stepのdeterministic validation状態を返す。"""
+
+    validation = step.get("validation")
+    return str(validation.get("status", "ERROR")) if isinstance(validation, dict) else "NOT RUN"
+
+
+def large_judge_path(descriptor_path: Path, step_id: str) -> Path:
+    """checkpoint固有のJudge JSON出力先を返す。"""
+
+    return descriptor_path.resolve().parent / "judges" / f"{step_id}.json"
+
+
 def validate_judge(judge: dict[str, Any]) -> None:
     """Judge JSONがレポート契約へ適合することを確認する。"""
 
@@ -1022,7 +1636,8 @@ def knowledge_statistics(knowledge_root: Path) -> dict[str, int]:
         if not isinstance(metadata, dict):
             continue
         concepts += int(
-            metadata.get("pk_category") == "concept" or metadata.get("type") == "Concept"
+            path.name not in {"index.md", "log.md"}
+            and all(metadata.get(key) for key in ("type", "pk_category", "pk_derivation"))
         )
         drafts += int(metadata.get("pk_derivation") == "draft")
         inferred += int(metadata.get("pk_derivation") == "inferred")
@@ -1200,6 +1815,47 @@ def cleanup(workspace: Path) -> None:
     shutil.rmtree(run_root)
 
 
+def cleanup_large(descriptor_path: Path) -> None:
+    """Large descriptorで識別した一時run全体を削除する。"""
+
+    descriptor = load_large_descriptor(descriptor_path)
+    cleanup(Path(descriptor["workspace"]))
+
+
+def load_large_descriptor(descriptor_path: Path) -> dict[str, Any]:
+    """Large descriptorと一時workspaceの対応を検証する。"""
+
+    descriptor_path = descriptor_path.resolve()
+    descriptor = read_json(descriptor_path)
+    if descriptor.get("benchmark") != "project-knowledge-large":
+        raise ScenarioError(f"not a large scenario descriptor: {descriptor_path}")
+    workspace_value = descriptor.get("workspace")
+    if not isinstance(workspace_value, str):
+        raise ScenarioError("large workspace is invalid")
+    workspace = Path(workspace_value).resolve()
+    if descriptor_path.name != LARGE_RESULT or descriptor_path.parent != workspace.parent:
+        raise ScenarioError("large descriptor and workspace do not share a run root")
+    load_run(workspace)
+    steps = descriptor.get("steps")
+    if not isinstance(steps, list) or not steps:
+        raise ScenarioError("large steps are invalid")
+    return descriptor
+
+
+def find_large_step(descriptor: dict[str, Any], step_id: Any) -> dict[str, Any]:
+    """descriptorから一意なstepを取得する。"""
+
+    if not isinstance(step_id, str):
+        raise ScenarioError("large step id is required")
+    matches = [
+        step for step in descriptor.get("steps", [])
+        if isinstance(step, dict) and step.get("step") == step_id
+    ]
+    if len(matches) != 1:
+        raise ScenarioError(f"large step not found: {step_id}")
+    return matches[0]
+
+
 def load_run(workspace: Path) -> tuple[Path, dict[str, Any]]:
     """workspaceとmarkerの対応を検証してrun情報を返す。"""
 
@@ -1337,6 +1993,7 @@ def build_parser() -> argparse.ArgumentParser:
     session_record.add_argument("--agent-path", required=True)
     session_record.add_argument("--candidate")
     session_record.add_argument("--parent-session-id")
+    session_record.add_argument("--step")
     benchmark_parser = commands.add_parser("benchmark")
     benchmark_commands = benchmark_parser.add_subparsers(dest="benchmark_command", required=True)
     benchmark_prepare = benchmark_commands.add_parser("prepare")
@@ -1353,6 +2010,13 @@ def build_parser() -> argparse.ArgumentParser:
     utility_evaluate = utility_commands.add_parser("evaluate")
     utility_evaluate.add_argument("descriptor", type=Path)
     utility_evaluate.add_argument("condition", choices=UTILITY_CONDITIONS)
+    large_parser = commands.add_parser("large")
+    large_commands = large_parser.add_subparsers(dest="large_command", required=True)
+    large_prepare = large_commands.add_parser("prepare")
+    large_prepare.add_argument("scenario")
+    for name in ("advance", "validate", "report", "cleanup"):
+        command_parser = large_commands.add_parser(name)
+        command_parser.add_argument("descriptor", type=Path)
     return parser
 
 
@@ -1385,6 +2049,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.agent_path,
                 args.candidate,
                 args.parent_session_id,
+                args.step,
             )
             print(json.dumps(reference, ensure_ascii=False, indent=2))
             return 0
@@ -1416,6 +2081,26 @@ def main(argv: list[str] | None = None) -> int:
                 return exit_code
             cleanup_utility(args.descriptor)
             print("Utility benchmark workspaces removed")
+            return 0
+        if args.command == "large":
+            if args.large_command == "prepare":
+                print(prepare_large(args.scenario))
+                return 0
+            if args.large_command == "advance":
+                step = advance_large(args.descriptor)
+                print(json.dumps(step, ensure_ascii=False, indent=2))
+                return 0
+            if args.large_command == "validate":
+                step = validate_large(args.descriptor)
+                print(json.dumps(step, ensure_ascii=False, indent=2))
+                status = step["validation"]["status"]
+                return 0 if status == "PASS" else (2 if status == "ERROR" else 1)
+            if args.large_command == "report":
+                output, exit_code = large_report(args.descriptor)
+                print(output)
+                return exit_code
+            cleanup_large(args.descriptor)
+            print("Large scenario workspace removed")
             return 0
         cleanup(args.workspace)
         print("Temporary workspace removed")

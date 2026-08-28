@@ -1,6 +1,6 @@
 ---
 name: project-knowledge-scenario-test
-description: Project Knowledge Skill自身のE2E生成品質と、Knowledge利用時の実作業Utilityを隔離Fixture、deterministic validation、独立Judgeで評価する。開発者がQuick、Model Benchmark、Utility Benchmarkを明示実行した場合だけ使用する。
+description: Project Knowledge Skill自身のE2E生成品質と、Knowledge利用時の実作業Utilityを隔離Fixture、deterministic validation、独立Judgeで評価する。開発者がQuick、Large、Model Benchmark、Utility Benchmarkを明示実行した場合だけ使用する。
 metadata:
   version: "1.0.0"
 ---
@@ -11,9 +11,11 @@ Project Knowledge Skillの生成品質と実作業でのUtilityを、通常利�
 
 ## 実行モード
 
-`quick`、`benchmark`、`utility`を扱う。`full`や未指定の別モードをQuickへ読み替えず、未対応として報告する。
+`quick`、`large`、`benchmark`、`utility`を扱う。`full`や未指定の別モードをQuickへ読み替えず、未対応として報告する。
 
 Quickを実行するときは[Quick scenario](references/quick.md)を読み、記載された順序、モデル、隔離境界、終了条件に従う。
+
+Largeを実行するときは[Large scenario](references/large.md)を読み、Quickと同じ品質観点、人工Fixture、12回の増分update、checkpoint Judge、step別usage記録の順序に従う。
 
 Benchmarkを実行するときは[Benchmark](references/benchmark.md)を読み、Quickを再利用した候補実行、blind Judge、結果集計の順序に従う。
 
@@ -21,14 +23,15 @@ Utilityを実行するときは[Utility Benchmark](references/utility.md)を読�
 
 ## 共通ルール
 
-- QuickのActorとJudgeは従来どおり別の`gpt-5.6-luna`サブエージェントとし、`reasoning_effort: low`、`fork_turns: none`で起動する。Model BenchmarkのActorとJudgeは`agents/benchmark.yml`、UtilityのTask / Judgeは`agents/utility.yml`だけで定義する。
+- QuickとLargeのActor/Judgeは`agents/scenarios.yml`、Model BenchmarkのActor/Judgeは`agents/benchmark.yml`、UtilityのTask/Judgeは`agents/utility.yml`だけで定義し、すべて`fork_turns: none`で起動する。
 - ActorへJudgeの期待値、採点観点、`expectations.yml`の場所を渡さない。
 - JudgeへActorの会話、判断過程、プロンプトを渡さない。
 - Actorには開発中checkoutの`project-knowledge` Skillを通常どおり実行させ、テスト専用の生成手順へ置き換えない。
 - 機械判定できる問題は既存validatorを再利用し、意味評価だけをJudgeへ委ねる。
 - 元Fixtureやリポジトリを変更せず、最後に一時workspaceを必ず破棄する。
 - QuickではActor 1 + Judge 1を基本とし、多数決や観点別Judgeを追加しない。
+- Largeは明示実行時だけ行い、Quickから起動しない。各updateを独立Actor sessionとして計測し、Judgeは設定済みcheckpointだけで実行する。
 - Benchmarkは明示実行時だけ行い、Full scenario、複数回実行、pairwise Judge、Judge ensembleを追加しない。
 - Utilityも明示実行時だけ行い、QuickやBenchmarkから自動起動しない。single-runの観測結果を統計的効果として断定しない。
-- QuickとModel Benchmarkのusageは、記録したsubagent session IDに対応するCodex rollout JSONLだけから計測する。Actorへ自己申告させず、app-serverやusage APIへfallbackしない。正確に対応付けまたはbaseline算出できなければ、品質結果とは独立して`unavailable`とする。
+- Quick、Large、Model Benchmarkのusageは、記録したsubagent session IDに対応するCodex rollout JSONLだけから計測する。Actorへ自己申告させず、app-serverやusage APIへfallbackしない。正確に対応付けまたはbaseline算出できなければ、品質結果とは独立して`unavailable`とする。
 - コスト比較は`agents/credit-rates.yml`の基準日つきCodex credit rateを使い、token数や通貨換算をコスト指標にしない。

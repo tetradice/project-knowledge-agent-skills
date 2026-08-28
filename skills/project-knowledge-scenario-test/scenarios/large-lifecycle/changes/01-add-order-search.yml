@@ -1,0 +1,20 @@
+id: update-01
+size: small
+summary: Add tenant-scoped order search API.
+operations:
+  - action: write
+    path: backend/orders/src/search.py
+    content: |
+      """Tenant-scoped order search."""
+
+      ALLOWED_FILTERS = ("state", "created_after", "customer_reference")
+
+      def search_scope(tenant_id: str) -> dict[str, str]:
+          """Always anchor searches to the authenticated tenant."""
+          return {"tenant_id": tenant_id}
+  - action: write
+    path: docs/api/order-search.md
+    content: |
+      # Order search
+
+      `GET /v1/orders` supports `state`, `created_after`, and `customer_reference`. The tenant is taken only from `X-Tenant-Id`; cross-tenant search is not supported.

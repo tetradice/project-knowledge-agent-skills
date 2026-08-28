@@ -1,0 +1,33 @@
+id: update-03
+size: medium
+summary: Add a payments adapter with a strict token boundary.
+operations:
+  - action: write
+    path: backend/payments/src/adapter.py
+    content: |
+      """External payment provider boundary."""
+
+      PROVIDER_TIMEOUT_SECONDS = 8
+
+      def provider_reference(payload: dict[str, str]) -> str:
+          """Persist only the provider reference, never the payment token."""
+          return payload["provider_reference"]
+  - action: write
+    path: backend/payments/src/events.py
+    content: |
+      """Payment events consumed by orders."""
+
+      EVENTS = ("payment.authorized", "payment.failed", "payment.refunded")
+  - action: write
+    path: backend/payments/tests/test_adapter.py
+    content: |
+      from payments.src.adapter import provider_reference
+
+      def test_extracts_reference() -> None:
+          assert provider_reference({"provider_reference": "pay-1"}) == "pay-1"
+  - action: write
+    path: docs/architecture/payments.md
+    content: |
+      # Payments boundary
+
+      Payments owns provider communication. Orders consumes payment events and stores only provider references. Raw payment tokens must not be logged, persisted, or placed in Project events.

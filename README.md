@@ -47,10 +47,11 @@ $project-knowledge-publish 開発環境構築をoffline HTMLとして出力し�
 $project-knowledge-audit Knowledge Baseの重複や肥大化を監査してください。
 $project-knowledge-audit Project Knowledgeの構造をrefactorしてください。
 $project-knowledge-scenario-test quick
+$project-knowledge-scenario-test large
 $project-knowledge-scenario-test utility
 ```
 
-`project-knowledge-scenario-test`はSkill開発者向けです。Quickは小さなFixtureからKnowledgeを正しく構築できるかを確認し、session JSONLからActor/Judge別のCodex creditsを計測します。Model BenchmarkはActor creditsを主なコスト指標として構築モデルを比較します。Utilityは同一sourceと同一TaskをNo-KB / With-KBで1回ずつ実行し、実作業の品質とtoken usageの差を観測します。通常のProject Knowledge保守から自動起動せず、一時workspaceは実行後に破棄します。Fullシナリオは未実装です。
+`project-knowledge-scenario-test`はSkill開発者向けです。Quickは小さなFixtureからKnowledgeを正しく構築できるかを確認します。LargeはQuickと同じ品質観点を人工的な実案件規模のFixtureと12回の増分updateで測定し、step別のKnowledge規模とActor/Judge tokenを記録します。Model BenchmarkはActor creditsを主なコスト指標として構築モデルを比較します。Utilityは同一sourceと同一TaskをNo-KB / With-KBで1回ずつ実行し、実作業の品質とtoken usageの差を観測します。通常のProject Knowledge保守から自動起動せず、一時workspaceは実行後に破棄します。Fullシナリオは未実装です。
 
 操作とSkillは自動連鎖しません。`verify`から`fix`、`audit`から`refactor`へ自動昇格せず、`update`後の自動検証、情報不足時の通常調査、更新後の自動publishも行いません。
 

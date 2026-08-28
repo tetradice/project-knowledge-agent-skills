@@ -1,0 +1,36 @@
+scenario: large-lifecycle
+required_knowledge:
+  - id: modular-architecture
+    meaning: gateway、orders、inventory、notifications、web consoleの責務境界
+    evidence:
+      - README.md
+      - docs/architecture/system-overview.md
+  - id: tenant-and-idempotency-contract
+    meaning: tenant headerとidempotency keyを必須とするAPI規約
+    evidence:
+      - docs/api/conventions.md
+      - backend/gateway/src/request_policy.py
+  - id: deployment-and-rollback
+    meaning: canary deploymentとmigration互換性を含むrollback制約
+    evidence:
+      - docs/operations/deployment.md
+      - deployment/pipeline.yml
+  - id: lifecycle-changes
+    meaning: 現在のsourceに一致するAPI、設定、module、運用、architectureの変更履歴
+    evidence:
+      - README.md
+      - docs/decisions/
+forbidden_knowledge:
+  - id: obsolete-v1-routing
+    meaning: 削除後もv1 routingや廃止設定を現行仕様として残す
+  - id: debug-and-generated-noise
+    meaning: debug port、sample request id、generated outputを永続Knowledgeとして扱う
+expected_properties:
+  - id: project-artifact-provenance
+    meaning: source projectの複数artifactへ到達可能なprovenanceを持つ
+  - id: classification
+    meaning: direct、synthesized、inferredとdeclared、extracted、derivedを根拠に応じて使う
+  - id: bounded-growth
+    meaning: updateで既存Conceptを統合・更新し、同義Conceptを不自然に増殖させない
+  - id: current-state
+    meaning: 削除・移動・変更されたsourceと矛盾するobsolete Knowledgeを現行扱いしない

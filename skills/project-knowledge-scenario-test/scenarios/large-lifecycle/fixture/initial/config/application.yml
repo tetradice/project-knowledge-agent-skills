@@ -1,0 +1,8 @@
+environment: development
+database:
+  pool_size: 20
+cache:
+  provider: redis
+  ttl_seconds: 60
+features:
+  bulk_orders: false

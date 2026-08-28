@@ -1,0 +1,67 @@
+id: update-05
+size: large
+summary: Introduce asynchronous bulk order imports across API, worker, config, tests, and operations.
+operations:
+  - action: write
+    path: backend/gateway/src/routes.py
+    content: |
+      """Stable public route ownership."""
+
+      ROUTES = {
+          "/v1/orders": "orders",
+          "/v1/bulk-orders": "bulk-orders",
+          "/v1/inventory": "inventory",
+          "/v1/notifications": "notifications",
+      }
+  - action: write
+    path: backend/bulk_orders/src/importer.py
+    content: |
+      """Asynchronous bulk order import."""
+
+      MAX_ROWS = 5000
+      CHUNK_SIZE = 100
+
+      def chunk_count(rows: int) -> int:
+          """Calculate bounded worker chunks."""
+          if rows > MAX_ROWS:
+              raise ValueError("bulk import exceeds row limit")
+          return (rows + CHUNK_SIZE - 1) // CHUNK_SIZE
+  - action: write
+    path: backend/bulk_orders/src/status.py
+    content: |
+      """Bulk import lifecycle."""
+
+      STATES = ("accepted", "validating", "processing", "completed", "failed")
+  - action: write
+    path: backend/bulk_orders/tests/test_importer.py
+    content: |
+      from bulk_orders.src.importer import chunk_count
+
+      def test_chunks_rows() -> None:
+          assert chunk_count(250) == 3
+  - action: write
+    path: config/application.yml
+    content: |
+      environment: development
+      database:
+        pool_size: 20
+      cache:
+        provider: redis
+        ttl_seconds: 120
+      features:
+        bulk_orders: true
+      bulk_orders:
+        max_rows: 5000
+        chunk_size: 100
+  - action: write
+    path: docs/api/bulk-orders.md
+    content: |
+      # Bulk orders
+
+      `POST /v1/bulk-orders` accepts at most 5,000 rows and returns an operation id. Processing is asynchronous in chunks of 100. The idempotency key applies to the whole uploaded file.
+  - action: write
+    path: docs/operations/bulk-orders.md
+    content: |
+      # Bulk order operations
+
+      Pause new imports when queue age exceeds 15 minutes. Existing chunks continue. Replaying a failed chunk is safe because rows retain the file idempotency key and row number.

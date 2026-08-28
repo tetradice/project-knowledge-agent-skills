@@ -1,0 +1,21 @@
+id: update-02
+size: small
+summary: Change disposable cache TTL and document its operational impact.
+operations:
+  - action: write
+    path: config/application.yml
+    content: |
+      environment: development
+      database:
+        pool_size: 20
+      cache:
+        provider: redis
+        ttl_seconds: 120
+      features:
+        bulk_orders: false
+  - action: write
+    path: docs/operations/cache.md
+    content: |
+      # Cache operations
+
+      Read cache entries expire after 120 seconds. Flushing Redis may increase database load but cannot lose orders or reservations because PostgreSQL remains authoritative.
