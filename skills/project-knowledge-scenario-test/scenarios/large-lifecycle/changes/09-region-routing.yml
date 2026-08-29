@@ -1,0 +1,36 @@
+id: update-09
+size: architecture
+summary: Add regional routing while retaining tenant isolation and a single order authority.
+operations:
+  - action: write
+    path: backend/gateway/src/region.py
+    content: |
+      """Tenant home-region routing."""
+
+      REGIONS = ("eu-central", "us-east", "ap-northeast")
+
+      def route(home_region: str) -> str:
+          """Reject unknown regions instead of silently crossing boundaries."""
+          if home_region not in REGIONS:
+              raise ValueError("unknown tenant home region")
+          return home_region
+  - action: write
+    path: config/regions.yml
+    content: |
+      regions: [eu-central, us-east, ap-northeast]
+      tenant_directory: global-read-only
+      order_writes: tenant-home-region
+  - action: write
+    path: docs/architecture/regional-routing.md
+    content: |
+      # Regional routing
+
+      The global tenant directory stores only tenant-to-home-region mapping. Gateway routes all writes to the home region. Order and stock data are not multi-master. A region outage fails writes closed; operators may perform an explicit failover after verifying replication lag.
+  - action: write
+    path: docs/decisions/0004-single-writer-regions.md
+    content: |
+      # ADR 0004: Single-writer tenant regions
+
+      Status: accepted
+
+      Each tenant has one write region. Multi-master writes were rejected because conflict resolution could violate order and inventory invariants.

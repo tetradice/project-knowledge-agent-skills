@@ -1,0 +1,18 @@
+id: update-06
+size: noise
+summary: Change local debug notes and sample data without changing product contracts.
+operations:
+  - action: write
+    path: scripts/debug_local.ps1
+    content: |
+      # Temporary local helper; values are developer-specific and not product configuration.
+      $debugPort = 49321
+      $sampleRequestId = "req-local-second-run"
+      Write-Host "debug $debugPort $sampleRequestId"
+  - action: write
+    path: tools/fixture_builder/sample_data.py
+    content: |
+      """Non-production sample data builder."""
+
+      SAMPLE_TENANTS = ("demo-a", "demo-b", "demo-c")
+      # TODO: replace the sample postal code before a demo.

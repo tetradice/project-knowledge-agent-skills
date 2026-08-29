@@ -1,0 +1,6 @@
+stages: [test, migration-check, canary, promote]
+canary:
+  percentages: [10, 50, 100]
+  observation_minutes: 10
+rollback:
+  strategy: previous-image

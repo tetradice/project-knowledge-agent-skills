@@ -19,6 +19,7 @@ SKILL_NAMES = (
     "project-knowledge-audit",
     "project-knowledge-fast-ask",
     "project-knowledge-publish",
+    "project-knowledge-scenario-test",
 )
 
 
@@ -104,6 +105,7 @@ def test_all_skills_have_expected_semver() -> None:
         "project-knowledge-audit": "3.1.0",
         "project-knowledge-fast-ask": "2.0.0",
         "project-knowledge-publish": "2.0.0",
+        "project-knowledge-scenario-test": "1.0.0",
     }
     for name in SKILL_NAMES:
         text = (SKILLS_ROOT / name / "SKILL.md").read_text(encoding="utf-8")

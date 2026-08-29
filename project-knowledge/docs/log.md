@@ -1,5 +1,34 @@
 # ナレッジ log
 
+## 2026-08-28
+
+### Project Knowledge Utility Benchmarkを追加
+
+- 任意Git repositoryの同一TaskをNo-Knowledge / With-Knowledgeで比較する明示実行Skill、worktree隔離、blind Judge、JSONL由来usage / AI Credit、結果artifact保持を記録した。
+- README表記検証Taskのsingle-runでは両条件の機械評価がPASSし、JudgeはWith-Knowledge側を僅差で選好した。単一小Taskの観測を一般的効果として扱わない境界を保存した。
+
+### Quick / Benchmarkのcredit計測を統一
+
+- QuickとQuickベースBenchmarkのusage sourceをCodex session / rollout JSONLだけへ統一し、subagent sessionのbaseline差分とCodex creditsを記録した。
+- 既存single-run Benchmarkを再計測し、Actor creditsによる比較とJudge共通costの分離、取得不能時の`unavailable`契約を保存した。
+
+### Largeライフサイクルシナリオを追加
+
+- Quickと同じ品質観点を人工Fixture、12 update、checkpoint Judge、step別のKnowledge規模とtoken usageで評価するLargeを記録した。
+- 実行結果として、全stepのdeterministic validation、checkpoint Judge score、Actor/Judge別credit、初期・最終Knowledge規模、既知のFixture規模制約を保存した。
+
+## 2026-08-27
+
+### 通常初期化の品質ゲートを追加
+
+- 通常初期化を骨組み生成だけで完了させず、代表sourceの調査と、保存価値がある場合の根拠付きConcept生成までを完了条件として記録した。
+- Quickのdeterministic validationに`missing-concept`と`missing-project-artifact-source`を追加し、改善後の独立Actor/Judge実行が全観点PASSであることを記録した。
+
+### QuickモデルBenchmarkを追加
+
+- Quick fixtureを再利用するLuna/Terra/Solの比較、固定blind Judge、実測不能なActor tokenを`unavailable`とする契約を記録した。
+- single-run `quick-basic`のdeterministic結果とJudge結果を、実行記録とともに保存した。
+
 ## 2026-08-26
 
 ### fixとrefactorを追加

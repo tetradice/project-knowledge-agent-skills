@@ -1,0 +1,10 @@
+scenario: utility-basic
+task: Add shipment cancellation API
+judge_dimensions:
+  - requirement_compliance
+  - project_convention_compliance
+  - architectural_consistency
+  - scope_discipline
+  - code_quality
+  - maintainability
+score_range: [0, 100]

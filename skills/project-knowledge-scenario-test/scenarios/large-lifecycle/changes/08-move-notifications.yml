@@ -1,0 +1,18 @@
+id: update-08
+size: medium
+summary: Reorganize notification delivery into worker and policy packages.
+operations:
+  - action: move
+    from: backend/notifications/src/delivery.py
+    to: backend/notifications/src/workers/delivery.py
+  - action: move
+    from: backend/notifications/src/templates.py
+    to: backend/notifications/src/policies/templates.py
+  - action: write
+    path: docs/architecture/system-overview.md
+    content: |
+      # System overview
+
+      The gateway authenticates and normalizes public requests. Orders coordinates the business transaction but does not mutate stock directly. Inventory owns reservations. Payments owns provider calls. Notifications separates delivery workers from locale and template policies. The web console uses only gateway APIs.
+
+      PostgreSQL is authoritative. Redis entries are disposable. Events use an outbox in the same database transaction as aggregate changes. Consumers must be idempotent by event id.

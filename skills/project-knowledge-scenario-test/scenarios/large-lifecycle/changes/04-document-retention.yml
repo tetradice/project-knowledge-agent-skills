@@ -1,0 +1,18 @@
+id: update-04
+size: documentation-only
+summary: Define audit-event retention and deletion responsibility.
+operations:
+  - action: write
+    path: docs/operations/data-retention.md
+    content: |
+      # Data retention
+
+      Audit events are retained for 400 days in immutable storage. Application logs remain for 30 days. Customer deletion removes profile fields within 24 hours but retains legally required order totals with a pseudonymous subject key.
+  - action: write
+    path: docs/decisions/0003-audit-retention.md
+    content: |
+      # ADR 0003: Separate audit retention
+
+      Status: accepted
+
+      Audit events use immutable storage because operational logs have a shorter retention period and different access controls.

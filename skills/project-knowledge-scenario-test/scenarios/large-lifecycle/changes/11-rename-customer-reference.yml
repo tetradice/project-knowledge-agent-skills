@@ -1,0 +1,20 @@
+id: update-11
+size: small
+summary: Rename customer_reference to external_reference across API and search policy.
+operations:
+  - action: write
+    path: backend/orders/src/search.py
+    content: |
+      """Tenant-scoped order search."""
+
+      ALLOWED_FILTERS = ("state", "created_after", "external_reference")
+
+      def search_scope(tenant_id: str) -> dict[str, str]:
+          """Always anchor searches to the authenticated tenant."""
+          return {"tenant_id": tenant_id}
+  - action: write
+    path: docs/api/order-search.md
+    content: |
+      # Order search
+
+      `GET /v1/orders` supports `state`, `created_after`, and `external_reference`. The former `customer_reference` name is no longer accepted. The tenant comes only from `X-Tenant-Id`.

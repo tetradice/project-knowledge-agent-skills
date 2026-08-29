@@ -1,0 +1,23 @@
+id: update-10
+size: medium
+summary: Replace percentage canary stages with regional waves and explicit rollback gates.
+operations:
+  - action: write
+    path: deployment/pipeline.yml
+    content: |
+      stages: [test, migration-check, ap-northeast, eu-central, us-east]
+      wave:
+        observation_minutes: 15
+        abort_error_rate_percent: 1
+        abort_p95_ms: 800
+      rollback:
+        strategy: previous-image
+        require_replication_check: true
+  - action: write
+    path: docs/operations/deployment.md
+    content: |
+      # Deployment
+
+      Production deploys proceed by regional wave: ap-northeast, eu-central, then us-east, with 15 minutes observation per wave. Error rate above 1% or p95 latency above 800 ms aborts promotion.
+
+      Database migrations remain backward compatible with the previous version. Rollback requires a replication check and deploys the previous image. Destructive schema cleanup happens only in a later release.

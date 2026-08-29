@@ -1,6 +1,6 @@
 # Project Knowledgeスキル群の現行仕様（相談用概要）
 
-最終更新日：2026-08-26
+最終更新日：2026-08-27
 
 外部のチャットへ設計相談するために、現在の仕様を要約したものです。
 
@@ -9,9 +9,9 @@
 Project Knowledgeは、リポジトリ固有の仕様、設計判断、運用知識、検証結果を、AIと人間が再利用できるMarkdownのKnowledge Baseとしてプロジェクト内に蓄積する仕組みです。
 会話履歴をそのまま保存するのではなく、将来も価値がある情報だけを選び、根拠と導出方法を残しながら更新します。
 
-## 4つのスキル
+## 利用者向け4スキルと開発者向けテスト
 
-責務の混在と意図しない副作用を避けるため、保守、限定回答、公開、構造監査・構造改善を4つのSkillに分離しています。
+責務の混在と意図しない副作用を避けるため、通常利用は保守、限定回答、公開、構造監査・構造改善の4つのSkillに分離しています。これらとは別に、Project Knowledge Skill自身の生成品質を評価する開発者向けSkillを設けています。
 
 | スキル | 主な責務 | 呼び出し方 |
 | --- | --- | --- |
@@ -19,6 +19,7 @@ Project Knowledgeは、リポジトリ固有の仕様、設計判断、運用知
 | `project-knowledge-fast-ask` | Knowledgeだけを根拠に回答 | 明示指定のみ |
 | `project-knowledge-publish` | 人間向けMarkdownまたはオフラインHTMLを生成 | 明示指定のみ |
 | `project-knowledge-audit` | 重複、肥大化、分断、検索性を監査し、明示時は保守的にrefactor | 明示指定のみ |
+| `project-knowledge-scenario-test` | 隔離Fixture上でKnowledge生成品質を評価し、UtilityではNo-KB / With-KBの実作業品質を比較 | 明示指定のみ |
 
 メインスキルは`init`、`update`、`verify`、`fix`、`config`を扱います。
 `init`は空のKnowledge Baseを作る初期構築、`update`は新しい情報・実装差分・収集方針の反映、`config`は既知の運用設定の表示・変更を担います。`pk_category`、`pk_derivation`、source種別は、利用者に選択を求めず、入力と根拠からスキルが判定します。
@@ -31,9 +32,9 @@ Project Knowledgeは、リポジトリ固有の仕様、設計判断、運用知
 
 `verify`は既存Knowledgeの内容健全性を、形式、source、provenance、根拠、現在状態、鮮度、Knowledge間の意味的整合性の順にread-onlyで確認します。`fix`は同じ観点で明白な問題を修正して再検査します。`audit`は重複・肥大化・分断・検索性などをread-onlyで診断し、`refactor`は意味・source・provenanceを維持しながら構造を改善して再診断します。
 
-各操作とほかの3スキルは互いを自動実行しません。`verify`から`fix`、`audit`から`refactor`へ自動昇格せず、書き込みはユーザーが`update`、`fix`、`refactor`を明示的に意図した場合だけ行います。`project-knowledge-audit`はexplicit-onlyを維持し、一般的な「整理して」「改善して」から自動実行しません。
+通常利用の各操作とほかの3スキルは互いを自動実行しません。`verify`から`fix`、`audit`から`refactor`へ自動昇格せず、書き込みはユーザーが`update`、`fix`、`refactor`を明示的に意図した場合だけ行います。`project-knowledge-audit`はexplicit-onlyを維持し、一般的な「整理して」「改善して」から自動実行しません。`project-knowledge-scenario-test`も通常操作から自動実行せず、開発者がQuick、Model Benchmark、Utility Benchmarkを明示した場合だけ起動します。
 
-この境界により、「保守（構築・追加・更新・検証・修正・設定）」「限定回答」「公開」「構造監査・構造改善」を個別に制御できます。
+この境界により、「保守（構築・追加・更新・検証・修正・設定）」「限定回答」「公開」「構造監査・構造改善」を個別に制御し、Skill自身の品質評価も通常利用から切り離せます。
 
 ## データフォーマット
 

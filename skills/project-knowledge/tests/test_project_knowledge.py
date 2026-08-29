@@ -240,6 +240,49 @@ def test_skill_contract_exposes_maintenance_operations() -> None:
         assert (SKILL_ROOT / "references" / reference).is_file()
 
 
+def test_update_contract_keeps_conversation_summaries_evidence_rich() -> None:
+    """会話記録が結論だけの要約へ退行しないことを固定する。"""
+
+    update = (SKILL_ROOT / "references" / "update.md").read_text(encoding="utf-8")
+
+    for marker in (
+        "結論だけに圧縮しない",
+        "問題の発生から解決または中断までの時系列",
+        "判断・制約",
+        "実施した調査または操作",
+        "観測された結果・エラー",
+        "採用または却下した対応",
+        "検証結果",
+        "未解決または未検証の境界",
+        "全文保存が明示された場合",
+        "Raw Referenceとして原文を保存する",
+    ):
+        assert marker in update
+
+
+def test_init_contract_distinguishes_normal_and_empty_initialization() -> None:
+    """通常初期化が調査と根拠付きConcept生成まで行う契約を固定する。"""
+
+    init = (SKILL_ROOT / "references" / "init.md").read_text(encoding="utf-8")
+
+    # 空初期化だけが初期構造の生成後に停止する
+    assert "「空で初期化」の明示があれば" in init
+    assert "通常の`init`を、骨組みだけで完了としてはならない" in init
+    assert "通常の`init`はその後のプロジェクト調査とKnowledge本文の生成まで" in init
+
+    # 通常初期化は代表sourceを調査して保存価値とprovenanceを判定する
+    for marker in (
+        "READMEと、存在する範囲で代表的なコード、設定、設計資料を調査する",
+        "根拠を持つ通常Conceptを1件以上生成する",
+        "実在する根拠ファイルを`project-artifact`として参照する",
+        "`pk_category: extracted`、`pk_derivation: direct`",
+        "`pk_category: extracted`、`pk_derivation: synthesized`",
+        "未決定事項を確定済みのstableな事実へ昇格させず",
+        "一時的なデバッグ値を保存しない",
+    ):
+        assert marker in init
+
+
 def test_verify_contract_defines_ordered_content_health_checks() -> None:
     """verifyの検証順序と結果分類をSkill契約として固定する。"""
 

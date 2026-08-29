@@ -1,0 +1,29 @@
+scenario: quick-basic
+required_knowledge:
+  - id: paid-events-only
+    meaning: order.paidイベントだけを通知対象とする
+    evidence:
+      - README.md
+      - src/relay.py
+  - id: hashed-customer-log-id
+    meaning: 顧客識別子はログ出力前にSHA-256でハッシュ化する
+    evidence:
+      - README.md
+      - src/relay.py
+  - id: configured-retry-policy
+    meaning: 通知は設定に基づき最大3回、1秒・5秒・15秒の間隔で再試行する
+    evidence:
+      - src/relay.py
+      - config/relay.yml
+forbidden_knowledge:
+  - id: redis-adopted
+    meaning: Redisキューが採用済み、または現在利用中であるという確定的な主張
+  - id: temporary-debug-values
+    meaning: 一時ポート49152、単発リクエストID、デバッグ経過の永続化
+expected_properties:
+  - id: project-artifact-provenance
+    meaning: source projectから抽出した事実は、実在する根拠ファイルをproject-artifactとして参照する
+  - id: synthesized-retry-provenance
+    meaning: 再試行動作を一つの知識として整理する場合は、コードと設定の両方を根拠にし、synthesizedとして扱う
+  - id: undecided-redis-status
+    meaning: Redisへ触れる場合は未決定であることを保ち、採用済みのstableな事実へ変えない
