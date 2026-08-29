@@ -5,8 +5,20 @@ pk_derivation: synthesized
 status: stable
 generated:
   by: project-knowledge/3.1.0
-  at: 2026-08-26T21:21:07+09:00
+  at: 2026-08-29T11:11:14+09:00
 sources:
+- resource: ../references/user-statements/2026-08-29-inspect-skill-output.md
+  pk_source_type: user-statement
+- resource: ../references/interactions/2026-08-29-inspect-skill-output-implementation.md
+  pk_source_type: interaction-record
+- resource: ../references/user-statements/2026-08-29-standard-policy-reference.md
+  pk_source_type: user-statement
+- resource: ../references/interactions/2026-08-29-standard-policy-reference-implementation.md
+  pk_source_type: interaction-record
+- resource: ../references/user-statements/2026-08-29-help-inspect.md
+  pk_source_type: user-statement
+- resource: ../references/user-statements/2026-08-29-help-skill-split.md
+  pk_source_type: user-statement
 - resource: ../references/user-statements/2026-08-26-fix-and-refactor.md
   pk_source_type: user-statement
 - resource: ../references/user-statements/2026-08-26-verify-content-health.md
@@ -23,7 +35,13 @@ sources:
   pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge/references/update.md
   pk_source_type: change-implementation
+- resource: ../../../skills/project-knowledge/references/standard-knowledge-policy.md
+  pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge/references/fix.md
+  pk_source_type: change-implementation
+- resource: ../../../skills/project-knowledge-inspect/SKILL.md
+  pk_source_type: change-implementation
+- resource: ../../../skills/project-knowledge-help/SKILL.md
   pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge-fast-ask/SKILL.md
   pk_source_type: change-implementation
@@ -33,12 +51,20 @@ sources:
   pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge-publish/references/publishing.md
   pk_source_type: change-implementation
+- resource: ../references/interactions/2026-08-29-help-inspect-implementation.md
+  pk_source_type: interaction-record
+- resource: ../references/interactions/2026-08-29-help-skill-split-implementation.md
+  pk_source_type: interaction-record
 ---
 # プロジェクトナレッジ Skill
 
 ## 責務と操作
 
-メインの`project-knowledge`は`init`、`update`、`verify`、`fix`、`config`を扱い、Knowledgeを構築・追加・更新・検証・修正・設定して保守する。Knowledge限定回答、成果物生成、構造監査・構造改善は、それぞれ`project-knowledge-fast-ask`、`project-knowledge-publish`、`project-knowledge-audit`へ分離する。
+メインの`project-knowledge`は`init`、`update`、`verify`、`fix`、`config`を扱い、Knowledgeを構築、追加、更新、検証、修正、設定して保守する。利用案内、Knowledge Baseの説明、Knowledge限定回答、成果物生成、構造監査・構造改善、Knowledgeなし・ありの実務比較は、それぞれ`project-knowledge-help`、`project-knowledge-inspect`、`project-knowledge-fast-ask`、`project-knowledge-publish`、`project-knowledge-audit`、`project-knowledge-benchmark`へ分離する。
+
+`project-knowledge-help`はexplicit-onlyのread-only Skillである。対象なしでは5基本操作の用途、操作名指定、自然言語例と、利用者向け5専用Skillの明示呼び出し例を定型形式で説明する。対象指定ありと未知対象には別の定型を使い、説明した操作やSkillを自動実行しない。旧形式の`$project-knowledge help`は互換実行せず、新Skillを案内する。
+
+`project-knowledge-inspect`はSkill名の明示指定または自然言語の依頼から使用できるread-only Skillである。正常時は概要、Knowledge文書だけのフォルダツリー、interactions・user-statements・その他Reference・作成Knowledgeの4区分の統計、Knowledge Policy設定の自然文説明を固定順で返す。内容の正しさ、鮮度、構造品質、改善方法は評価せず、未初期化または未対応形式では安全に読み取りを止める。
 
 内容・正しさの検査のみは`verify`、検査と修正は`fix`が担当する。どちらも形式、source、provenance、根拠、現在状態、鮮度、Knowledge間の意味的整合性の順に確認する。`verify`はread-onlyで、`fix`は客観的に修正できる既存Knowledgeの問題だけを直して再検査する。単なる`verify`依頼から`fix`へ昇格しない。
 
@@ -46,7 +72,7 @@ sources:
 
 `update`は新しい情報や変更を反映する操作であり、既存Knowledgeの問題を正す`fix`、既存Knowledge Baseの構造を改善する`refactor`と区別する。各操作は互いを自動実行しない。未登録Knowledgeのcoverage調査はupdateまたはdiscovery側へ委ねる。宣言された方針と実装の差異はKnowledgeの誤りと即断せずimplementation driftとして報告し、検証後も`inferred`などのprovenanceを書き換えない。
 
-3つの専用Skillはexplicit-onlyとし、通常質問、要約、実装レビュー、文書レビューから自動発火させない。各Skillは別Skillを自動実行しない。
+`project-knowledge-help`、`project-knowledge-fast-ask`、`project-knowledge-publish`、`project-knowledge-audit`、`project-knowledge-benchmark`はexplicit-onlyとし、通常質問、要約、実装レビュー、文書レビューから自動発火させない。`project-knowledge-inspect`は構造・格納情報の説明を求める自然言語に対応する。各Skillは別Skillを自動実行しない。
 
 限定回答の手順は`project-knowledge-fast-ask`の`SKILL.md`へ集約する。構造監査・構造改善は`project-knowledge-audit`の`SKILL.md`から`audit`と`refactor`のReferenceへ振り分ける。公開はMarkdownとMaterial for MkDocsによるoffline HTMLだけを扱い、rendererやoffline設定を永続化しない。
 
@@ -58,7 +84,7 @@ sources:
 
 root・nested `index.md`はナビゲーション専用とする。独立して再利用できる事実、判断、制約、状態、検証結果は通常Conceptへ分離し、frontmatterで分類と根拠を保持する。
 
-`project-knowledge/knowledge-policy.md`はKnowledgeをどう育てるかを定義する。対象領域は固定せず、肥大化はPolicy、重複回避、Incremental Update、Progressive Disclosureで抑える。
+`project-knowledge/knowledge-policy.md`は、Agent Skill `project-knowledge`同梱の標準Policyに従う宣言と参照情報を持つ。プロジェクト固有方針がある場合は本文へ記載して標準Policyより優先し、指定されていない部分には標準Policyを適用する。対象領域は固定せず、肥大化はPolicy、重複回避、Incremental Update、Progressive Disclosureで抑える。
 
 `init`のスクリプトは常に管理構造だけを生成する。「空で初期化」の指定は、生成後にエージェントが調査・本文作成を行わないためのintentであり、CLI optionではない。
 
@@ -74,4 +100,4 @@ root・nested `index.md`はナビゲーション専用とする。独立して�
 
 ## 専用操作
 
-askは`project-knowledge/docs/**`だけを情報源とし、不足時は推測しない。publishは再生成可能なMarkdownとoffline HTMLを出力する。内容の正しさは`verify`/`fix`、構造・品質は`audit`/`refactor`が、それぞれ検査のみ/検査と修正を担当する。書き込み操作へ自動昇格しない。
+inspectは`project-knowledge/`だけを読み、固定形式で概要を説明する。askは`project-knowledge/docs/**`だけを情報源とし、不足時は推測しない。publishは再生成可能なMarkdownとoffline HTMLを出力する。benchmarkは同一実務TaskをProject Knowledgeなし・ありで比較する。内容の正しさは`verify`/`fix`、構造・品質は`audit`/`refactor`が、それぞれ検査のみ/検査と修正を担当する。書き込み操作へ自動昇格しない。

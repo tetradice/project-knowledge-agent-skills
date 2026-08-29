@@ -1,6 +1,6 @@
 # init
 
-通常の`init`はscope指定なしで実行できる。`uv run <skill>/scripts/init_project.py <project-root>`を実行し、形式1.0のmanifest、ナレッジ Bundleの骨組み、運用設定をfrontmatterに持つ`knowledge-policy.md`、再構築可能なstate、Reference、AGENTS.mdルーティングを生成する。共有`config.yml`は生成しない。このscriptが行うのは初期構造の生成までであり、通常の`init`はその後のプロジェクト調査とKnowledge本文の生成まで終えて完了とする。
+通常の`init`はscope指定なしで実行できる。`uv run <skill>/scripts/init_project.py <project-root>`を実行し、形式1.0のmanifest、ナレッジ Bundleの骨組み、運用設定とSkill同梱の標準Policyへの参照を持つ`knowledge-policy.md`、再構築可能なstate、Reference、AGENTS.mdルーティングを生成する。共有`config.yml`は生成しない。このscriptが行うのは初期構造の生成までであり、通常の`init`はその後のプロジェクト調査とKnowledge本文の生成まで終えて完了とする。
 
 書込み前に形式を検出する。既存Bundleは形式1.0だけを受け付け、manifestがない、壊れている、形式名または版が異なる場合は変更せず停止する。
 

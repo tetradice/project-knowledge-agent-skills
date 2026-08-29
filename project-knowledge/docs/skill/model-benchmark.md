@@ -18,19 +18,19 @@ sources:
   pk_source_type: interaction-record
 - resource: ../references/interactions/2026-08-28-scenario-credit-measurement-implementation.md
   pk_source_type: interaction-record
-- resource: ../../../skills/project-knowledge-scenario-test/agents/benchmark.yml
+- resource: ../../../developer-tests/project-knowledge-scenario-test/agents/benchmark.yml
   pk_source_type: change-implementation
-- resource: ../../../skills/project-knowledge-scenario-test/agents/credit-rates.yml
+- resource: ../../../developer-tests/project-knowledge-scenario-test/agents/credit-rates.yml
   pk_source_type: change-implementation
-- resource: ../../../skills/project-knowledge-scenario-test/references/benchmark.md
+- resource: ../../../developer-tests/project-knowledge-scenario-test/references/benchmark.md
   pk_source_type: change-implementation
-- resource: ../../../skills/project-knowledge-scenario-test/scripts/scenario_test.py
+- resource: ../../../developer-tests/project-knowledge-scenario-test/scripts/scenario_test.py
   pk_source_type: change-implementation
-- resource: ../../../skills/project-knowledge-scenario-test/scripts/session_usage.py
+- resource: ../../../developer-tests/project-knowledge-scenario-test/scripts/session_usage.py
   pk_source_type: change-implementation
-- resource: ../../../skills/project-knowledge-scenario-test/tests/test_scenario_test.py
+- resource: ../../../developer-tests/project-knowledge-scenario-test/tests/test_scenario_test.py
   pk_source_type: change-implementation
-- resource: ../../../skills/project-knowledge-scenario-test/tests/test_session_usage.py
+- resource: ../../../developer-tests/project-knowledge-scenario-test/tests/test_session_usage.py
   pk_source_type: change-implementation
 ---
 # QuickシナリオのモデルBenchmark

@@ -34,7 +34,8 @@ from session_usage import (
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 SCENARIOS_ROOT = SKILL_ROOT / "scenarios"
-PROJECT_KNOWLEDGE_ROOT = SKILL_ROOT.parent / "project-knowledge"
+REPOSITORY_ROOT = SKILL_ROOT.parents[1]
+PROJECT_KNOWLEDGE_ROOT = REPOSITORY_ROOT / "skills" / "project-knowledge"
 VALIDATOR = PROJECT_KNOWLEDGE_ROOT / "scripts" / "validate_knowledge.py"
 MARKER = ".project-knowledge-scenario-test.json"
 WORKSPACE_NAME = "workspace"

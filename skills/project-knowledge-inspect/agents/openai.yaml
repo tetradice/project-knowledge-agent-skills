@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Knowledge Inspect"
+  short_description: "Knowledgeの構造、格納情報、件数、更新方針を説明"
+  default_prompt: "Use $project-knowledge-inspect to explain this project's knowledge base without evaluating or changing it."

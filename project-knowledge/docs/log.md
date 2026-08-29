@@ -1,5 +1,32 @@
 # ナレッジ log
 
+## 2026-08-29
+
+### inspectを専用Skillへ分離して出力形式を変更
+
+- `inspect`をメインSkillから`project-knowledge-inspect`へ分離し、Skill名の明示指定と自然言語の依頼に対応させた。
+- 出力を概要、Knowledge文書だけのツリー、4区分の統計、Knowledge Policy設定の自然文説明で構成し、分離前の呼び出し方に関する記述を削除した。
+
+### 標準Knowledge PolicyをSkill同梱Referenceへ分離
+
+- 標準の収集・品質Policyを`references/standard-knowledge-policy.md`へ移し、生成される`knowledge-policy.md`本文は標準Policyに従う宣言と同梱参照だけを持つ形へ変更した。
+- プロジェクト固有方針は本文へ記載して標準Policyより優先し、未指定部分には標準Policyを適用する。validatorの自由形式本文許容と既存Bundleを自動上書きしない境界は維持し、pytest 56件、Ruff、validator、`git diff --check`を通過してGit baselineを更新した。
+
+### helpを専用Skillへ分離
+
+- `help`をメインSkillから`project-knowledge-help`へ分離し、対象なし、対象指定、未知対象の定型出力を追加した。
+- 基本操作表は6操作の用途、操作名指定、自然言語例を示し、利用者向け専用Skillは4つだけを案内する。旧形式の`$project-knowledge help`は新Skillへの案内だけを返す。
+
+### Scenario Testを開発者向けディレクトリへ分離
+
+- `project-knowledge-scenario-test`を一般ユーザー向けの`skills/`から`developer-tests/`へ移し、関連するsource参照を新しいパスへ更新した。
+- 一般ユーザー向けSkillではなく開発者用テストであるという配置方針を、ユーザー指示と実装を根拠にKnowledgeへ記録した。
+
+### helpとinspectを追加
+
+- `help`をメイン操作と利用者向けSkillのread-only案内、`inspect`をKnowledge Baseの構造と格納情報のread-only説明として追加した。
+- `inspect`を内容の正しさを扱う`verify`、構造品質を扱う`audit`、構造改善を行う`refactor`から分離し、別操作やSkillを自動実行しない境界を記録した。
+
 ## 2026-08-28
 
 ### Project Knowledge Utility Benchmarkを追加

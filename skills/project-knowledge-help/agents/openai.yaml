@@ -1,0 +1,6 @@
+interface:
+  display_name: "Project Knowledge Help"
+  short_description: "Project Knowledgeの操作と専用Skillを定型形式で案内"
+  default_prompt: "Use $project-knowledge-help to show structured help for Project Knowledge operations and specialized skills."
+policy:
+  allow_implicit_invocation: false

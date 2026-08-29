@@ -6,12 +6,6 @@ learning:
   mode: opportunistic
 ---
 
-# Project Knowledge Policy
+Agent Skill `project-knowledge` の標準ポリシーに従います。
 
-将来のAIエージェントまたは開発者が、このプロジェクトを理解・変更・運用する際に再利用できる、持続的なプロジェクト固有知識を保存する。
-
-仕様、設計判断とその理由、重要な前提・制約、開発・運用方法、暗黙知など、将来の利用価値が高い情報を優先する。ユーザーが明示的に保存を要求した情報も保存対象とする。
-
-一時的な情報、容易にソースコード等から再取得できる低レベル情報、一般知識、重複、秘密情報などは原則として保存しない。
-
-Knowledgeの対象領域や構成は固定せず、関連性、検索性、可読性、重複回避を考慮して整理する。
+参照: Agent Skill `project-knowledge` 同梱の `references/standard-knowledge-policy.md`

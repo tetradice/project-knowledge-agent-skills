@@ -10,17 +10,17 @@ verified:
   by: process:scenario-test
   at: 2026-08-28T15:20:09+09:00
 sources:
-- resource: ../../../skills/project-knowledge-scenario-test/SKILL.md
+- resource: ../../../developer-tests/project-knowledge-scenario-test/SKILL.md
   pk_source_type: change-implementation
-- resource: ../../../skills/project-knowledge-scenario-test/references/large.md
+- resource: ../../../developer-tests/project-knowledge-scenario-test/references/large.md
   pk_source_type: change-implementation
-- resource: ../../../skills/project-knowledge-scenario-test/scripts/scenario_test.py
+- resource: ../../../developer-tests/project-knowledge-scenario-test/scripts/scenario_test.py
   pk_source_type: change-implementation
-- resource: ../../../skills/project-knowledge-scenario-test/agents/scenarios.yml
+- resource: ../../../developer-tests/project-knowledge-scenario-test/agents/scenarios.yml
   pk_source_type: change-implementation
-- resource: ../../../skills/project-knowledge-scenario-test/agents/credit-rates.yml
+- resource: ../../../developer-tests/project-knowledge-scenario-test/agents/credit-rates.yml
   pk_source_type: change-implementation
-- resource: ../../../skills/project-knowledge-scenario-test/scenarios/large-lifecycle/scenario.yml
+- resource: ../../../developer-tests/project-knowledge-scenario-test/scenarios/large-lifecycle/scenario.yml
   pk_source_type: change-implementation
 - resource: ../references/interactions/2026-08-28-large-lifecycle-execution.md
   pk_source_type: interaction-record

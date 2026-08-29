@@ -15,7 +15,7 @@
 11. source、実装、設定、既存ナレッジをclaim単位で比較し、矛盾、検証状態、未解決事項を隠さない。
 12. 関連indexと`log.md`を更新してvalidatorを実行する。成功後だけ、Gitでは`detect_changes.py <project-root> --write-baseline`、非Gitでは`--write-snapshot`を実行する。失敗時はbaselineとsnapshotを進めない。未commit変更はcheckpointせず、commitされるまで再検出を許容する。詳細は[state.md](state.md)を参照する。
 
-収集方針の自然言語指示は`knowledge-policy.md`の更新として扱い、必要なら同じ会話や作業から該当ナレッジも抽出する。
+収集方針の自然言語指示は`knowledge-policy.md`の更新として扱う。プロジェクト固有の方針を標準Policyより優先し、本文には固有方針、標準Policyを適用するフォールバック宣言、Skill同梱の`references/standard-knowledge-policy.md`への参照情報をこの順で置く。必要なら同じ会話や作業から該当ナレッジも抽出する。
 
 verify結果を反映するときは、確認方法とactorを確認して`verified`を保存する。`generated`は現在内容の生成者として独立して維持する。
 

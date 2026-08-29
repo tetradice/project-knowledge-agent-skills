@@ -7,7 +7,7 @@ metadata:
 
 # プロジェクトナレッジ
 
-プロジェクト固有の知識を`project-knowledge/`で構築・更新・検証・修正・設定し、正しい状態に保つ。質問回答、成果物生成、構造監査・構造改善は扱わない。
+プロジェクト固有の知識を`project-knowledge/`で構築・更新・検証・修正・設定し、正しい状態に保つ。利用案内、Knowledge Baseの説明、Knowledgeを根拠とする質問回答、成果物生成、構造監査・構造改善は扱わない。
 
 ## 操作を選ぶ
 
@@ -29,9 +29,9 @@ metadata:
 
 ## 分離した操作
 
-Knowledge限定回答、公開、構造監査・構造改善はそれぞれ`project-knowledge-fast-ask`、`project-knowledge-publish`、`project-knowledge-audit`の責務である。このSkillから自動実行しない。
+利用案内、Knowledge Baseの説明、Knowledge限定回答、公開、構造監査・構造改善、Knowledgeなし・ありの実務比較はそれぞれ`project-knowledge-help`、`project-knowledge-inspect`、`project-knowledge-fast-ask`、`project-knowledge-publish`、`project-knowledge-audit`、`project-knowledge-benchmark`の責務である。このSkillから自動実行しない。
 
-`$project-knowledge ask`、`publish`、`audit`、`refactor`を受け取った場合は処理を実行せず、対応する専用Skillを明示的に使用するよう案内する。`$project-knowledge verify`と`$project-knowledge fix`はこのSkillの各操作として実行する。
+`$project-knowledge help`、`ask`、`publish`、`audit`、`refactor`、`benchmark`を受け取った場合は処理を実行せず、対応する専用Skillを明示的に使用するよう案内する。`help`には`$project-knowledge-help`を案内し、互換実行しない。`verify`と`fix`はこのSkillの各操作として実行する。
 
 ## 共通ルール
 

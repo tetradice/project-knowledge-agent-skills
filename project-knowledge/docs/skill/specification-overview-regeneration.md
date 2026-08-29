@@ -45,7 +45,7 @@ Project Knowledge内の関連Conceptも確認するが、現行実装と矛盾�
 - `pk_category`、`pk_derivation`、`pk_source_type`の意味
 - provenance、生成主体、検証主体、信頼性の扱い
 - バージョンの種類、Source of Truth、更新条件、形式1.0だけを扱う境界
-- `knowledge-policy.md`のfrontmatter設定と本文Policyの役割
+- `knowledge-policy.md`のfrontmatter設定、Skill同梱の標準Policy参照、プロジェクト固有方針の優先規則
 - publishの対応出力、対象範囲の実行時指定、非永続化
 - `manifest.yml`、`knowledge-policy.md`、`state.yml`という認知モデル
 - 外部相談で検討したい論点

@@ -9,7 +9,8 @@ import pytest
 import yaml
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
-SKILLS_ROOT = SKILL_ROOT.parent
+REPOSITORY_ROOT = SKILL_ROOT.parents[1]
+SKILLS_ROOT = REPOSITORY_ROOT / "skills"
 RUNNER_PATH = SKILL_ROOT / "scripts" / "scenario_test.py"
 RUNNER = runpy.run_path(str(RUNNER_PATH))
 INIT = SKILLS_ROOT / "project-knowledge" / "scripts" / "init_project.py"

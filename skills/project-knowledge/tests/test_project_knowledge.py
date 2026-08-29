@@ -13,6 +13,8 @@ SKILLS_ROOT = SKILL_ROOT.parent
 PUBLISH_ROOT = SKILLS_ROOT / "project-knowledge-publish"
 AUDIT_ROOT = SKILLS_ROOT / "project-knowledge-audit"
 ASK_ROOT = SKILLS_ROOT / "project-knowledge-fast-ask"
+HELP_ROOT = SKILLS_ROOT / "project-knowledge-help"
+INSPECT_ROOT = SKILLS_ROOT / "project-knowledge-inspect"
 POLICY_SETTINGS = "policy_settings.py"
 
 
@@ -54,9 +56,27 @@ def test_init_creates_policy_from_current_template(tmp_path: Path) -> None:
     assert policy == template
     assert "knowledge:\n  human_readable: false" in policy
     assert "learning:\n  mode: opportunistic" in policy
+    assert policy.split("---", 2)[2].strip() == (
+        "Agent Skill `project-knowledge` の標準ポリシーに従います。\n\n"
+        "参照: Agent Skill `project-knowledge` 同梱の "
+        "`references/standard-knowledge-policy.md`"
+    )
+    assert "持続的なプロジェクト固有知識を保存する" not in policy
     assert not (root / "config.yml").exists()
     assert not (root / "scope.md").exists()
     assert not (root / "scope.yml").exists()
+
+
+def test_standard_policy_reference_contains_default_principles() -> None:
+    standard_policy = (
+        SKILL_ROOT / "references" / "standard-knowledge-policy.md"
+    ).read_text(encoding="utf-8")
+
+    # 生成先から分離した標準の保存・除外・構成原則を固定
+    assert "持続的なプロジェクト固有知識を保存する" in standard_policy
+    assert "将来の利用価値が高い情報を優先する" in standard_policy
+    assert "秘密情報などは原則として保存しない" in standard_policy
+    assert "対象領域や構成は固定せず" in standard_policy
 
 
 def test_validator_accepts_freeform_policy_body(tmp_path: Path) -> None:
@@ -236,8 +256,118 @@ def test_skill_contract_exposes_maintenance_operations() -> None:
     }
     # 公開操作と対応Referenceの構造をSkill契約として固定
     assert operations == {"init", "update", "verify", "fix", "config"}
-    for reference in ("init.md", "update.md", "verification.md", "fix.md", "config.md"):
+    for reference in (
+        "init.md",
+        "update.md",
+        "verification.md",
+        "fix.md",
+        "config.md",
+    ):
         assert (SKILL_ROOT / "references" / reference).is_file()
+    assert not (SKILL_ROOT / "references" / "help.md").exists()
+    assert "[help.md]" not in skill
+
+
+def test_help_contract_has_fixed_overview_output() -> None:
+    """対象なしhelpの見出し、列、全操作の呼び出し例を固定する。"""
+
+    help_skill = (HELP_ROOT / "SKILL.md").read_text(encoding="utf-8")
+    headings = (
+        "# Project Knowledge Help",
+        "## 基本操作",
+        "## 専用Skill",
+        "## 詳細ヘルプ",
+    )
+    positions = [help_skill.index(heading, help_skill.index("## 対象なしの出力")) for heading in headings]
+    assert positions == sorted(positions)
+    assert "| 操作 | 用途 | 操作名指定 | 自然言語例 |" in help_skill
+
+    for operation in ("init", "update", "verify", "fix", "config"):
+        row = next(
+            line
+            for line in help_skill.splitlines()
+            if line.startswith(f"| `{operation}` |")
+        )
+        cells = [cell.strip() for cell in row.strip("|").split("|")]
+        assert len(cells) == 4
+        assert f"$project-knowledge {operation}" in cells[2]
+        assert cells[3]
+
+
+def test_help_contract_explains_only_user_facing_specialized_skills() -> None:
+    """利用者向け専用Skillと非実行境界を固定する。"""
+
+    help_skill = (HELP_ROOT / "SKILL.md").read_text(encoding="utf-8")
+    for skill_name in (
+        "project-knowledge-inspect",
+        "project-knowledge-fast-ask",
+        "project-knowledge-publish",
+        "project-knowledge-audit",
+        "project-knowledge-benchmark",
+    ):
+        assert f"| `{skill_name}` |" in help_skill
+
+    assert "$project-knowledge-help publish" in help_skill
+    assert "$project-knowledge-inspect" in help_skill
+    assert "説明対象の操作やSkillを起動せず" in help_skill
+    assert "project-knowledge-scenario-test" not in help_skill
+
+
+def test_help_contract_has_fixed_target_and_unknown_output() -> None:
+    """対象指定時と未知対象時の定型出力、非実行境界を固定する。"""
+
+    help_skill = (HELP_ROOT / "SKILL.md").read_text(encoding="utf-8")
+    sections = ("## 用途", "## 書き込み", "## 呼び出し方", "## 主な結果", "## 対象外")
+
+    targeted = help_skill[help_skill.index("## 対象指定ありの出力") : help_skill.index("## 未知の対象の出力")]
+    unknown = help_skill[help_skill.index("## 未知の対象の出力") :]
+    for output_contract in (targeted, unknown):
+        positions = [output_contract.index(section) for section in sections]
+        assert positions == sorted(positions)
+
+    for target in ("inspect", "init", "update", "verify", "fix", "config", "fast-ask", "publish", "audit", "refactor", "benchmark"):
+        assert f"`{target}`" in unknown
+    assert "未知の対象は推測して補正せず" in help_skill
+    assert "説明対象の操作やSkillを実行しない" in help_skill
+
+
+def test_main_skill_routes_legacy_help_without_compatibility_execution() -> None:
+    """旧help形式は親Skillで処理せず、新Skillを案内する。"""
+
+    skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+    assert "`$project-knowledge help`" in skill
+    assert "`$project-knowledge-help`を案内し、互換実行しない" in skill
+
+
+def test_inspect_contract_has_fixed_report_shape_without_evaluation() -> None:
+    """inspectの出力形式、集計規則、read-only境界をSkill契約として固定する。"""
+
+    inspect = (INSPECT_ROOT / "SKILL.md").read_text(encoding="utf-8")
+
+    # 利用者向けの固定節と、Knowledge文書だけを扱う境界を固定
+    for marker in (
+        "`プロジェクトナレッジ情報`",
+        "`概要`",
+        "`構成`",
+        "`詳細`",
+        "`統計情報`",
+        "`ナレッジベースの更新方針`",
+        "フォルダツリー形式",
+        "rootおよびnested `index.md`",
+        "rootおよびnested `log.md`",
+        "過去のやり取りの記録（interactions）",
+        "ユーザーからの指示の記録（user-statements）",
+        "上記以外の参考資料",
+        "作成ナレッジ文書",
+        "`knowledge.human_readable: false`",
+        "`learning.mode: opportunistic`",
+        "Project Knowledge外のソースコードや設定",
+        "ファイルを作成、更新、削除しない",
+    ):
+        assert marker in inspect
+
+    assert "内容の正確性、鮮度、構造品質、改善方法は評価せず" in inspect
+    assert "検証、監査、修正、構造改善を自動実行しない" in inspect
 
 
 def test_update_contract_keeps_conversation_summaries_evidence_rich() -> None:
@@ -395,7 +525,7 @@ def test_audit_and_refactor_contract_preserves_safety_boundaries() -> None:
 
 
 def test_skill_markdown_links_resolve() -> None:
-    for skill_root in (SKILL_ROOT, ASK_ROOT, PUBLISH_ROOT, AUDIT_ROOT):
+    for skill_root in (SKILL_ROOT, ASK_ROOT, HELP_ROOT, PUBLISH_ROOT, AUDIT_ROOT):
         skill = (skill_root / "SKILL.md").read_text(encoding="utf-8")
         for target in re.findall(r"\]\(([^)]+\.md)\)", skill):
             assert (skill_root / target).is_file()
@@ -404,6 +534,7 @@ def test_skill_markdown_links_resolve() -> None:
 def test_specialized_skills_are_explicit_only() -> None:
     expected_boundaries = (
         ASK_ROOT,
+        HELP_ROOT,
         PUBLISH_ROOT,
         AUDIT_ROOT,
     )
@@ -421,11 +552,16 @@ def test_agents_template_routes_specialized_operations_explicitly() -> None:
 
     # init後のAGENTS.mdに新しい責務境界を短く反映
     assert "project-knowledge-fast-ask" in template
+    assert "project-knowledge-help" in template
     assert "通常のプロジェクト質問" in template
     assert "正確性検証・修正には`project-knowledge`" in template
     assert "`verify`は検査のみ、`fix`は検査と修正" in template
     assert "`audit`は読み取り専用、`refactor`は構造改善" in template
-    for name in ("project-knowledge-publish", "project-knowledge-audit"):
+    for name in (
+        "project-knowledge-publish",
+        "project-knowledge-audit",
+        "project-knowledge-benchmark",
+    ):
         assert name in template
     assert "project-knowledge-verify" not in template
 

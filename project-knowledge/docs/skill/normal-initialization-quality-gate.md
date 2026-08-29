@@ -9,13 +9,13 @@ generated:
 sources:
 - resource: ../../../skills/project-knowledge/references/init.md
   pk_source_type: change-implementation
-- resource: ../../../skills/project-knowledge-scenario-test/references/quick.md
+- resource: ../../../developer-tests/project-knowledge-scenario-test/references/quick.md
   pk_source_type: change-implementation
-- resource: ../../../skills/project-knowledge-scenario-test/scripts/scenario_test.py
+- resource: ../../../developer-tests/project-knowledge-scenario-test/scripts/scenario_test.py
   pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge/tests/test_project_knowledge.py
   pk_source_type: change-implementation
-- resource: ../../../skills/project-knowledge-scenario-test/tests/test_scenario_test.py
+- resource: ../../../developer-tests/project-knowledge-scenario-test/tests/test_scenario_test.py
   pk_source_type: change-implementation
 - resource: ../references/interactions/2026-08-27-normal-initialization-quick-execution.md
   pk_source_type: interaction-record

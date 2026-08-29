@@ -1,6 +1,6 @@
 # Project Knowledgeスキル群の現行仕様（相談用概要）
 
-最終更新日：2026-08-27
+最終更新日：2026-08-29
 
 外部のチャットへ設計相談するために、現在の仕様を要約したものです。
 
@@ -9,19 +9,24 @@
 Project Knowledgeは、リポジトリ固有の仕様、設計判断、運用知識、検証結果を、AIと人間が再利用できるMarkdownのKnowledge Baseとしてプロジェクト内に蓄積する仕組みです。
 会話履歴をそのまま保存するのではなく、将来も価値がある情報だけを選び、根拠と導出方法を残しながら更新します。
 
-## 利用者向け4スキルと開発者向けテスト
+## 利用者向け7スキルと開発者向けテスト
 
-責務の混在と意図しない副作用を避けるため、通常利用は保守、限定回答、公開、構造監査・構造改善の4つのSkillに分離しています。これらとは別に、Project Knowledge Skill自身の生成品質を評価する開発者向けSkillを設けています。
+責務の混在と意図しない副作用を避けるため、通常利用は保守、案内、構造・格納情報の説明、限定回答、公開、構造監査・構造改善、実務効果の比較の7つのSkillに分離しています。これらとは別に、Project Knowledge Skill自身の生成品質を評価する開発者向けテストハーネスを設けています。
 
-| スキル | 主な責務 | 呼び出し方 |
+| 利用者向けスキル | 主な責務 | 呼び出し方 |
 | --- | --- | --- |
 | `project-knowledge` | 初期構築、Knowledgeの追加と更新、内容・根拠・鮮度・形式の検証と修正、設定変更 | 自然言語の依頼から使用可能。verify/fixは明示的な検査・修正依頼時だけ |
+| `project-knowledge-help` | 基本操作と利用者向け専用Skillの使い方を定型形式で説明 | 明示指定のみ |
+| `project-knowledge-inspect` | Knowledge Baseの概要、構成、文書数、更新方針を評価せずに説明 | Skill名の明示指定または自然言語の依頼から使用可能 |
 | `project-knowledge-fast-ask` | Knowledgeだけを根拠に回答 | 明示指定のみ |
 | `project-knowledge-publish` | 人間向けMarkdownまたはオフラインHTMLを生成 | 明示指定のみ |
 | `project-knowledge-audit` | 重複、肥大化、分断、検索性を監査し、明示時は保守的にrefactor | 明示指定のみ |
-| `project-knowledge-scenario-test` | 隔離Fixture上でKnowledge生成品質を評価し、UtilityではNo-KB / With-KBの実作業品質を比較 | 明示指定のみ |
+| `project-knowledge-benchmark` | 同一の実務TaskをProject Knowledgeなし・ありで実行して比較 | 明示指定のみ |
+
+開発者向けの`project-knowledge-scenario-test`は`developer-tests/project-knowledge-scenario-test/`に置き、一般ユーザー向けSkillのインストール対象から除外します。隔離Fixture上でKnowledge生成品質を評価し、UtilityではNo-KB / With-KBの実作業品質を比較します。
 
 メインスキルは`init`、`update`、`verify`、`fix`、`config`を扱います。
+`project-knowledge-help`は対象なし、対象指定あり、未知対象の定型形式でメイン操作と利用者向けSkillの使い方を説明します。`project-knowledge-inspect`はKnowledge Baseの概要、Knowledge文書だけのツリー、4区分の統計、Policy設定の自然文説明を返します。どちらもread-onlyで、説明した操作やSkillを自動実行しません。旧形式の`$project-knowledge help`は互換実行せず、新Skillの明示使用を案内します。
 `init`は空のKnowledge Baseを作る初期構築、`update`は新しい情報・実装差分・収集方針の反映、`config`は既知の運用設定の表示・変更を担います。`pk_category`、`pk_derivation`、source種別は、利用者に選択を求めず、入力と根拠からスキルが判定します。
 保守操作は次の認知モデルで分けます。
 
@@ -30,11 +35,11 @@ Project Knowledgeは、リポジトリ固有の仕様、設計判断、運用知
 | Knowledge内容の正しさ | `verify` | `fix` |
 | Knowledge Baseの構造・品質 | `audit` | `refactor` |
 
-`verify`は既存Knowledgeの内容健全性を、形式、source、provenance、根拠、現在状態、鮮度、Knowledge間の意味的整合性の順にread-onlyで確認します。`fix`は同じ観点で明白な問題を修正して再検査します。`audit`は重複・肥大化・分断・検索性などをread-onlyで診断し、`refactor`は意味・source・provenanceを維持しながら構造を改善して再診断します。
+`project-knowledge-inspect`は観測した構造と格納情報を説明するだけです。`verify`は既存Knowledgeの内容健全性を、形式、source、provenance、根拠、現在状態、鮮度、Knowledge間の意味的整合性の順にread-onlyで確認します。`fix`は同じ観点で明白な問題を修正して再検査します。`audit`は重複・肥大化・分断・検索性などをread-onlyで診断し、`refactor`は意味・source・provenanceを維持しながら構造を改善して再診断します。
 
-通常利用の各操作とほかの3スキルは互いを自動実行しません。`verify`から`fix`、`audit`から`refactor`へ自動昇格せず、書き込みはユーザーが`update`、`fix`、`refactor`を明示的に意図した場合だけ行います。`project-knowledge-audit`はexplicit-onlyを維持し、一般的な「整理して」「改善して」から自動実行しません。`project-knowledge-scenario-test`も通常操作から自動実行せず、開発者がQuick、Model Benchmark、Utility Benchmarkを明示した場合だけ起動します。
+通常利用の各操作とほかの6スキルは互いを自動実行しません。`project-knowledge-help`と`project-knowledge-inspect`から別操作を実行せず、`verify`から`fix`、`audit`から`refactor`へ自動昇格せず、書き込みはユーザーが`update`、`fix`、`refactor`を明示的に意図した場合だけ行います。`project-knowledge-help`と`project-knowledge-audit`はexplicit-onlyを維持し、一般的な案内依頼や「整理して」「改善して」から自動実行しません。開発者向けScenario Testも通常操作から自動実行せず、開発者がQuick、Model Benchmark、Utility Benchmarkを明示した場合だけ起動します。
 
-この境界により、「保守（構築・追加・更新・検証・修正・設定）」「限定回答」「公開」「構造監査・構造改善」を個別に制御し、Skill自身の品質評価も通常利用から切り離せます。
+この境界により、「案内」「構造・格納情報の説明」「保守（構築・追加・更新・検証・修正・設定）」「限定回答」「公開」「構造監査・構造改善」「実務効果の比較」を個別に制御し、Skill自身の品質評価も通常利用から切り離せます。
 
 ## データフォーマット
 
@@ -45,7 +50,7 @@ Knowledge Baseは各プロジェクトの`project-knowledge/`に置きます。
 | --- | --- |
 | `manifest.yml` | Project Knowledge形式と形式版の宣言 |
 | `docs/` | Concept、Reference、ナビゲーション、更新履歴 |
-| `knowledge-policy.md` | Knowledgeをどう育てるか。frontmatterに運用設定、本文に収集・品質方針を持つ |
+| `knowledge-policy.md` | Knowledgeをどう育てるか。frontmatterに運用設定、本文にSkill同梱の標準Policyへの参照と任意のプロジェクト固有方針を持つ |
 | `state.yml` | 増分更新用の再構築可能なworking copy固有状態。Knowledgeの正本ではなく通常はcommitしない |
 | `published/` | Knowledgeから再生成した公開成果物 |
 | `.cache/` | 非Git環境のhash snapshotなど、再生成できるworking copy固有データ |
@@ -141,7 +146,7 @@ Knowledge形式版のMINORは、既存readerが安全に無視または解釈で
 
 ## Knowledge Policyの設定
 
-`knowledge-policy.md`は「Knowledgeをどう育てるか」を一箇所で表します。機械が読む運用設定はYAML frontmatter、人間とAIが読む収集・品質方針はMarkdown本文に置きます。設定変更時は管理する既知キーだけを変更し、本文、コメント、未知キーを保持します。
+`knowledge-policy.md`は、機械が読む運用設定をYAML frontmatterに、Agent Skill `project-knowledge`同梱の標準Policyに従う宣言と参照情報をMarkdown本文に置きます。標準Policyの実体は`references/standard-knowledge-policy.md`へ同梱し、外部URLには依存しません。プロジェクト固有方針が提示された場合は本文へ記載して標準Policyより優先し、指定されていない部分には標準Policyを適用します。設定変更時は管理する既知キーだけを変更し、本文、コメント、未知キーを保持します。
 
 ```yaml
 ---
@@ -159,17 +164,17 @@ learning:
 
 `learning.mode`は設定ファイル名やキーを指定しなくても、「今後は自動的に更新して」「明示時だけ更新して」のような自然言語の依頼から変更できます。
 
-収集方針を変える自然言語の依頼は`update`としてPolicy本文へ反映します。これに対し、publishの出力形式と対象範囲は実行時だけの指定であり、Knowledge Baseへ保存しません。
+収集方針を変える自然言語の依頼は`update`としてプロジェクト固有方針へ反映します。本文には固有方針、標準Policyを適用するフォールバック宣言、同梱Referenceの参照情報を順に置きます。これに対し、publishの出力形式と対象範囲は実行時だけの指定であり、Knowledge Baseへ保存しません。
 
 共有publish設定は使用しません。publishは既定でMarkdownとMaterial for MkDocsによるoffline HTMLを生成し、Knowledge本文へ逆同期しません。
 
 ## 仕様相談で検討したい論点
 
-- 4スキルへの分離は、安全性と分かりやすさに対して適切か。verifyをメインスキルの独立した保守操作とする境界は明確か。
+- 7スキルへの分離は、安全性と分かりやすさに対して適切か。helpをexplicit-only Skill、inspectを自然言語対応の専用Skill、verifyをメインスキルのread-only操作とする境界は明確か。
 - Knowledge Policyによるopen-worldな収集は、対象領域を固定する方式より長期運用に向いているか。
 - `pk_category`と`pk_derivation`の二軸は、実務で扱える複雑さに収まっているか。
 - User Statement、Interaction Record、Reference、Conceptの分離は、根拠追跡と保守コストの釣り合いが取れているか。
 - `verify`/`fix`と`audit`/`refactor`の対は、日常的な修正の簡便さと書き込み境界の安全性を両立できているか。
 - `opportunistic`な自動学習を「毎ターン」ではなく「作業単位の完了時」に限定する境界は明確か。
 - Skill版、Knowledge形式版、OKF版、state schema版の分離は、変更判断を明確にする効果と運用負荷が釣り合っているか。
-- 運用設定と意味的なPolicyを`knowledge-policy.md`にまとめた認知モデルは、利用者が迷わず変更できるか。
+- 運用設定とプロジェクト固有方針を`knowledge-policy.md`に置き、標準PolicyをSkill同梱Referenceへ分離した認知モデルは、利用者が迷わず変更できるか。
