@@ -1,6 +1,6 @@
 # Project Knowledgeスキル群の現行仕様（相談用概要）
 
-最終更新日：2026-08-29
+最終更新日：2026-08-31
 
 外部のチャットへ設計相談するために、現在の仕様を要約したものです。
 
@@ -37,7 +37,7 @@ Project Knowledgeは、リポジトリ固有の仕様、設計判断、運用知
 
 `project-knowledge-inspect`は観測した構造と格納情報を説明するだけです。`verify`は既存Knowledgeの内容健全性を、形式、source、provenance、根拠、現在状態、鮮度、Knowledge間の意味的整合性の順にread-onlyで確認します。`fix`は同じ観点で明白な問題を修正して再検査します。`audit`は重複・肥大化・分断・検索性などをread-onlyで診断し、`refactor`は意味・source・provenanceを維持しながら構造を改善して再診断します。
 
-通常利用の各操作とほかの6スキルは互いを自動実行しません。`project-knowledge-help`と`project-knowledge-inspect`から別操作を実行せず、`verify`から`fix`、`audit`から`refactor`へ自動昇格せず、書き込みはユーザーが`update`、`fix`、`refactor`を明示的に意図した場合だけ行います。`project-knowledge-help`と`project-knowledge-audit`はexplicit-onlyを維持し、一般的な案内依頼や「整理して」「改善して」から自動実行しません。開発者向けScenario Testも通常操作から自動実行せず、開発者がQuick、Model Benchmark、Utility Benchmarkを明示した場合だけ起動します。
+通常利用の各操作とほかの6スキルは互いを自動実行しません。`project-knowledge-help`と`project-knowledge-inspect`から別操作を実行せず、`verify`から`fix`、`audit`から`refactor`へ自動昇格せず、書き込みはユーザーが`update`、`fix`、`refactor`を明示的に意図した場合だけ行います。`project-knowledge-help`と`project-knowledge-audit`はexplicit-onlyを維持し、一般的な案内依頼や「整理して」「改善して」から自動実行しません。開発者向けScenario Testも通常操作から自動実行せず、開発者がQuick、Large、Model Benchmark、Utility Benchmarkを明示した場合だけ起動します。
 
 この境界により、「案内」「構造・格納情報の説明」「保守（構築・追加・更新・検証・修正・設定）」「限定回答」「公開」「構造監査・構造改善」「実務効果の比較」を個別に制御し、Skill自身の品質評価も通常利用から切り離せます。
 
@@ -120,6 +120,8 @@ Knowledge Policyは対象分野の固定リストではなく、情報の将来�
 更新頻度は`manual`、`opportunistic`、`aggressive`の3段階です。
 既定は、作業単位の完了時に候補を一度だけ評価する`opportunistic`です。
 このスキル群自身のKnowledge Baseは`manual`です。
+
+User Statementを追加または更新した場合は、その内容を関連するConceptなどのKnowledgeにも反映し、当該User Statementをsourceとして残します。
 
 ## 根拠と信頼性
 

@@ -5,8 +5,10 @@ pk_derivation: synthesized
 status: stable
 generated:
   by: project-knowledge/3.1.0
-  at: 2026-08-29T11:11:14+09:00
+  at: 2026-08-31T16:45:05+09:00
 sources:
+- resource: ../references/user-statements/2026-08-31-user-statement-reflection.md
+  pk_source_type: user-statement
 - resource: ../references/user-statements/2026-08-29-inspect-skill-output.md
   pk_source_type: user-statement
 - resource: ../references/interactions/2026-08-29-inspect-skill-output-implementation.md
@@ -91,6 +93,8 @@ root・nested `index.md`はナビゲーション専用とする。独立して�
 ## Provenance
 
 通常Conceptは`pk_category`で情報の種類、`pk_derivation`で導出方法を表す。sourceには`pk_source_type`を付け、ユーザー原文はUser Statement、作業経緯はInteraction Recordとして必要な場合だけ保存する。
+
+User Statementを追加・更新した場合は、内容を関連するConceptなど他のナレッジにも必ず反映し、そのUser Statementをsourceとして残す。
 
 `generated`は現在内容の生成者、`verified`は独立した確認者である。trust tierは`verified`から表示時に導出する。
 

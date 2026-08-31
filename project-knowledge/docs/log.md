@@ -1,5 +1,12 @@
 # ナレッジ log
 
+## 2026-08-31
+
+### User Statementの反映ルールを追加
+
+- User Statementを追加・更新した場合は、内容を関連するConceptなど他のナレッジにも必ず反映し、sourceとして残すルールをSkillとupdate手順へ追加した。
+- このユーザー指示をUser Statementとして保存し、Skill概要Conceptへ同じ制約とsourceを反映した。
+
 ## 2026-08-29
 
 ### inspectを専用Skillへ分離して出力形式を変更

@@ -38,6 +38,7 @@ metadata:
 - 書き込み前に[Knowledge Policy](references/knowledge-policy.md)を読み、プロジェクトの`knowledge-policy.md`へ適用する。秘密情報や一時情報は永続化しない。
 - 書き込み前に[Format 1.0](references/data-formats/1.0.md)を読み、形式1.0以外へは書き込まない。
 - `learning.mode`が自動更新を許可しても、毎ターンではなく作業単位の完了時だけ候補を評価する。詳細は[learning-modes.md](references/learning-modes.md)を読む。
+- User Statementを追加・更新した場合は、その内容を関連するConceptなど他のナレッジにも必ず反映し、当該User Statementをsourceとして残す。
 - root・nested `index.md`はナビゲーション専用とする。独立して再利用できる知識は通常Conceptへ分離し、frontmatterで分類と根拠を保持する。
 - 既存ファイルを上書き・削除するときは、選択したReferenceの手順に従う。
 

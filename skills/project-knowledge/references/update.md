@@ -7,7 +7,7 @@
 3. 今回の入力、変更ファイル、関連する既存ナレッジとReferenceだけからナレッジ候補を抽出する。毎回全体を再解析しない。
 4. [data-model.md](data-model.md)に従って通常Conceptの`pk_category`と`pk_derivation`、sourceの`pk_source_type`を判定する。選択をユーザーへ委ねない。
 5. [knowledge-policy.md](knowledge-policy.md)でナレッジ-worthyかを意味的に判定する。明示的な保存指示は強いシグナルとして優先する。
-6. provenanceを残す価値がある場合だけ[provenance.md](provenance.md)に従ってUser StatementまたはInteraction Recordを作る。既存Referenceやナレッジ本文を複製しない。
+6. provenanceを残す価値がある場合だけ[provenance.md](provenance.md)に従ってUser StatementまたはInteraction Recordを作る。User Statementを追加・更新した場合は、その内容を関連するConceptなど他のナレッジにも必ず反映し、当該User Statementをsourceとして残す。既存Referenceやナレッジ本文を複製しない。
 7. 会話・共有対話をInteraction Recordへ要約するときは、結論だけに圧縮しない。問題の発生から解決または中断までの時系列を保ち、少なくとも判断・制約、実施した調査または操作、観測された結果・エラー、採用または却下した対応、検証結果、未解決または未検証の境界を、元の情報に存在する範囲で記録する。各項目を無理に埋めず、存在しない情報を補わない。全文保存が明示された場合は、要約の代替にせずRaw Referenceとして原文を保存する。
 8. 関連ナレッジへ統合するか、新しいページ・カテゴリを必要最小限に作る。現在存在しない領域でも、Policyに合えば追加してよい。
 9. root・nested `index.md`はナビゲーション専用とし、タイトル、短い案内、リンク、リンク先を選ぶための短い説明だけを置く。独立して再利用できる事実、判断、制約、状態、検証結果は通常Conceptへ保存し、`type`、`pk_category`、`pk_derivation`、`sources`を付ける。
