@@ -1,5 +1,6 @@
 # Interaction Records
 
+- [publish現在構造補完コミットのレビュー](2026-09-01-publish-current-structure-review.md): publishの入力源拡張、重複判断、仕様概要に残る旧表現、検証結果を確認するときに読む。
 - [inspect専用Skill化と出力形式変更の実装記録](2026-08-29-inspect-skill-output-implementation.md): 専用Skillへの分離、出力契約、旧記述の削除、検証結果を確認するときに読む。
 - [標準Knowledge Policy参照化の実装記録](2026-08-29-standard-policy-reference-implementation.md): 標準Policyの同梱Reference化、プロジェクト固有方針の優先、検証結果とbaseline更新を確認するときに読む。
 - [help専用Skill化の実装記録](2026-08-29-help-skill-split-implementation.md): 専用Skillへの分離、定型出力、互換境界、検証結果を確認するときに読む。

@@ -5,7 +5,7 @@ pk_derivation: synthesized
 status: stable
 generated:
   by: project-knowledge/3.1.0
-  at: 2026-08-31T16:45:05+09:00
+  at: 2026-09-01T16:28:16+09:00
 sources:
 - resource: ../references/user-statements/2026-08-31-user-statement-reflection.md
   pk_source_type: user-statement
@@ -53,6 +53,8 @@ sources:
   pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge-publish/references/publishing.md
   pk_source_type: change-implementation
+- resource: ../references/interactions/2026-09-01-publish-current-structure-review.md
+  pk_source_type: interaction-record
 - resource: ../references/interactions/2026-08-29-help-inspect-implementation.md
   pk_source_type: interaction-record
 - resource: ../references/interactions/2026-08-29-help-skill-split-implementation.md
@@ -76,7 +78,9 @@ sources:
 
 `project-knowledge-help`、`project-knowledge-fast-ask`、`project-knowledge-publish`、`project-knowledge-audit`、`project-knowledge-benchmark`はexplicit-onlyとし、通常質問、要約、実装レビュー、文書レビューから自動発火させない。`project-knowledge-inspect`は構造・格納情報の説明を求める自然言語に対応する。各Skillは別Skillを自動実行しない。
 
-限定回答の手順は`project-knowledge-fast-ask`の`SKILL.md`へ集約する。構造監査・構造改善は`project-knowledge-audit`の`SKILL.md`から`audit`と`refactor`のReferenceへ振り分ける。公開はMarkdownとMaterial for MkDocsによるoffline HTMLだけを扱い、rendererやoffline設定を永続化しない。
+限定回答の手順は`project-knowledge-fast-ask`の`SKILL.md`へ集約する。構造監査・構造改善は`project-knowledge-audit`の`SKILL.md`から`audit`と`refactor`のReferenceへ振り分ける。
+
+公開は、Knowledgeに記録された持続的な設計意図、制約、理由、仕様と、現在のProject Artifactから直接確認できる実装構造を組み合わせ、MarkdownまたはMaterial for MkDocsによるoffline HTMLとして出力する。調査対象と詳細度は実行時に決め、Knowledge Baseへ永続化しない。Project Artifactから意図や将来方針を推測せず、Knowledgeとの明確な不一致は由来と根拠を区別して成果物へ示す。補完内容をKnowledgeへ逆同期せず、他のProject Knowledge操作も自動実行しない。
 
 ## 対応形式
 
@@ -104,4 +108,4 @@ User Statementを追加・更新した場合は、内容を関連するConcept�
 
 ## 専用操作
 
-inspectは`project-knowledge/`だけを読み、固定形式で概要を説明する。askは`project-knowledge/docs/**`だけを情報源とし、不足時は推測しない。publishは再生成可能なMarkdownとoffline HTMLを出力する。benchmarkは同一実務TaskをProject Knowledgeなし・ありで比較する。内容の正しさは`verify`/`fix`、構造・品質は`audit`/`refactor`が、それぞれ検査のみ/検査と修正を担当する。書き込み操作へ自動昇格しない。
+inspectは`project-knowledge/`だけを読み、固定形式で概要を説明する。askは`project-knowledge/docs/**`だけを情報源とし、不足時は推測しない。publishはKnowledgeと現在のProject Artifactから再生成可能なMarkdownとoffline HTMLを出力する。benchmarkは同一実務TaskをProject Knowledgeなし・ありで比較する。内容の正しさは`verify`/`fix`、構造・品質は`audit`/`refactor`が、それぞれ検査のみ/検査と修正を担当する。書き込み操作へ自動昇格しない。
