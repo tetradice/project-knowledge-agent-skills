@@ -552,6 +552,27 @@ def test_publish_contract_requires_reader_focused_transformation() -> None:
         assert marker in publishing
 
 
+def test_publish_contract_complements_current_project_artifacts() -> None:
+    """公開時の現在構造補完とKnowledge非更新の境界を固定する。"""
+
+    skill = (PUBLISH_ROOT / "SKILL.md").read_text(encoding="utf-8")
+    publishing = (PUBLISH_ROOT / "references" / "publishing.md").read_text(encoding="utf-8")
+
+    assert "現在のProject Artifactから確認できる実装構造" in skill
+    for marker in (
+        "## Project Artifactによる現在構造の補完",
+        "全ファイル、全クラス、全メソッドを無差別に列挙せず",
+        "実装から確実に判断できない意図、採用理由、仕様、将来方針を推測しない",
+        "Knowledgeの記載",
+        "現在のProject Artifact",
+        "限定的な検索で見つからないことだけを不一致の根拠にしない",
+        "User Statement、Interaction Record、Reference",
+        "`update`、`verify`、`fix`、`audit`、`refactor`を自動実行しない",
+        "汎用コードインデックスや構造キャッシュを作らず",
+    ):
+        assert marker in publishing
+
+
 def test_specialized_skills_are_explicit_only() -> None:
     expected_boundaries = (
         ASK_ROOT,

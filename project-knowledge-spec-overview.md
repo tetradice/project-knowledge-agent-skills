@@ -1,6 +1,6 @@
 # Project Knowledgeスキル群の現行仕様（相談用概要）
 
-最終更新日：2026-08-31
+最終更新日：2026-09-01
 
 外部のチャットへ設計相談するために、現在の仕様を要約したものです。
 
@@ -19,7 +19,7 @@ Project Knowledgeは、リポジトリ固有の仕様、設計判断、運用知
 | `project-knowledge-help` | 基本操作と利用者向け専用Skillの使い方を定型形式で説明 | 明示指定のみ |
 | `project-knowledge-inspect` | Knowledge Baseの概要、構成、文書数、更新方針を評価せずに説明 | Skill名の明示指定または自然言語の依頼から使用可能 |
 | `project-knowledge-fast-ask` | Knowledgeだけを根拠に回答 | 明示指定のみ |
-| `project-knowledge-publish` | 人間向けMarkdownまたはオフラインHTMLを生成 | 明示指定のみ |
+| `project-knowledge-publish` | Knowledgeと現在のProject Artifactから人間向けMarkdownまたはオフラインHTMLを生成 | 明示指定のみ |
 | `project-knowledge-audit` | 重複、肥大化、分断、検索性を監査し、明示時は保守的にrefactor | 明示指定のみ |
 | `project-knowledge-benchmark` | 同一の実務TaskをProject Knowledgeなし・ありで実行して比較 | 明示指定のみ |
 
@@ -168,7 +168,7 @@ learning:
 
 収集方針を変える自然言語の依頼は`update`としてプロジェクト固有方針へ反映します。本文には固有方針、標準Policyを適用するフォールバック宣言、同梱Referenceの参照情報を順に置きます。これに対し、publishの出力形式と対象範囲は実行時だけの指定であり、Knowledge Baseへ保存しません。
 
-共有publish設定は使用しません。publishは既定でMarkdownとMaterial for MkDocsによるoffline HTMLを生成し、Knowledge本文へ逆同期しません。
+共有publish設定は使用しません。publishは既定でMarkdownとMaterial for MkDocsによるoffline HTMLを生成します。持続的な意図・制約・理由はKnowledgeから、公開対象の理解に必要な現在のクラス、package、モジュール、公開API、依存関係、設定などはProject Artifactから取得します。Project Artifactから確実に判断できない意味を補わず、Knowledgeとの明確な不一致は成果物上で区別して示します。調査範囲と詳細度は実行時指定とし、Knowledge本文やProject Knowledgeの管理ファイルへ逆同期しません。
 
 ## 仕様相談で検討したい論点
 

@@ -18,7 +18,7 @@ npx skills add https://github.com/tetradice/project-knowledge-agent-skills
 | `project-knowledge-help` | `1.0.0` | 基本操作と利用者向け専用Skillを定型形式で案内 |
 | `project-knowledge-inspect` | `1.0.0` | Knowledgeの概要・構成・文書数・更新方針を説明 |
 | `project-knowledge-fast-ask` | `2.0.0` | Knowledgeだけを根拠に回答 |
-| `project-knowledge-publish` | `2.0.0` | Markdownまたはoffline HTMLを生成 |
+| `project-knowledge-publish` | `2.0.0` | Knowledgeと現在のProject ArtifactからMarkdownまたはoffline HTMLを生成 |
 | `project-knowledge-audit` | `3.1.0` | Knowledge Baseの構造を監査・refactor |
 | `project-knowledge-benchmark` | `1.0.0` | 任意の実務TaskをKnowledgeなし/ありでblind比較 |
 

@@ -45,7 +45,7 @@ Project Knowledgeの基本操作と利用者向け専用Skillを、決められ�
 | --- | --- | --- |
 | `project-knowledge-inspect` | Knowledge Baseの概要、構成、文書数、更新方針をread-onlyで説明する | `$project-knowledge-inspect` |
 | `project-knowledge-fast-ask` | Knowledgeだけを根拠に質問へ回答する | `$project-knowledge-fast-ask ログイン方式を教えてください。` |
-| `project-knowledge-publish` | Knowledgeから人間向けMarkdownまたはoffline HTMLを生成する | `$project-knowledge-publish 開発環境構築をoffline HTMLとして出力してください。` |
+| `project-knowledge-publish` | Knowledgeと現在のProject Artifactから人間向けMarkdownまたはoffline HTMLを生成する | `$project-knowledge-publish 開発環境構築をoffline HTMLとして出力してください。` |
 | `project-knowledge-audit` | Knowledge Baseの構造をauditし、明示時はrefactorする | `$project-knowledge-audit Knowledge Baseの重複や肥大化を監査してください。` |
 | `project-knowledge-benchmark` | 同一TaskをKnowledgeなし・ありで実行して比較する | `$project-knowledge-benchmark この実装TaskをKnowledgeなし・ありで比較してください。` |
 
