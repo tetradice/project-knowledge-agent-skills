@@ -531,6 +531,27 @@ def test_skill_markdown_links_resolve() -> None:
             assert (skill_root / target).is_file()
 
 
+def test_publish_contract_requires_reader_focused_transformation() -> None:
+    """公開時の人間向け変換規則と品質ゲートを固定する。"""
+
+    skill = (PUBLISH_ROOT / "SKILL.md").read_text(encoding="utf-8")
+    publishing = (PUBLISH_ROOT / "references" / "publishing.md").read_text(encoding="utf-8")
+
+    assert "機械的にコピーする処理ではない" in skill
+    for marker in (
+        "略記・キー値表現・圧縮された箇条書き",
+        "`status`、`verified`、`stale`",
+        "トークン数の削減や増加を成功条件にしない",
+        "## 文書単位の品質ゲート",
+        "単独で読んでも",
+        "変更目的だけの言い換えは避け",
+        "再編集した文書と主な編集内容",
+        "内容を維持した文書と、そのままで品質ゲートを満たすと判断した理由",
+        "公開対象から除外した文書と理由",
+    ):
+        assert marker in publishing
+
+
 def test_specialized_skills_are_explicit_only() -> None:
     expected_boundaries = (
         ASK_ROOT,
