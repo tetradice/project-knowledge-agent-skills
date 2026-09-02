@@ -19,4 +19,6 @@
 
 verify結果を反映するときは、確認方法とactorを確認して`verified`を保存する。`generated`は現在内容の生成者として独立して維持する。
 
-Referenceを不要と判断しても既存ファイルを即削除せず、audit候補にする。通常の完了報告では内部分類を強調せず、更新したナレッジと方針だけを簡潔に示す。
+Referenceを不要と判断しても既存ファイルを即削除せず、audit候補にする。
+
+更新完了後は[File change classification](file-change-classification.md)に従い、追加・更新したファイルを分類して完了報告へ件数を出力する。件数とは別に、更新したナレッジと方針を簡潔に示す。

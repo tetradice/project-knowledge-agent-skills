@@ -397,6 +397,7 @@ def test_init_contract_distinguishes_normal_and_empty_initialization() -> None:
 
     # 空初期化だけが初期構造の生成後に停止する
     assert "「空で初期化」の明示があれば" in init
+    assert "追加・更新したファイルの分類件数は完了報告へ出力する" in init
     assert "通常の`init`を、骨組みだけで完了としてはならない" in init
     assert "通常の`init`はその後のプロジェクト調査とKnowledge本文の生成まで" in init
 
@@ -411,6 +412,36 @@ def test_init_contract_distinguishes_normal_and_empty_initialization() -> None:
         "一時的なデバッグ値を保存しない",
     ):
         assert marker in init
+
+
+def test_init_and_update_report_only_user_facing_file_counts() -> None:
+    """initとupdateが共通分類で利用者向け件数だけを報告する契約を固定する。"""
+
+    classification_path = SKILL_ROOT / "references" / "file-change-classification.md"
+    classification = classification_path.read_text(encoding="utf-8")
+    init = (SKILL_ROOT / "references" / "init.md").read_text(encoding="utf-8")
+    update = (SKILL_ROOT / "references" / "update.md").read_text(encoding="utf-8")
+
+    # initとupdateは独立した共通分類Referenceを参照する
+    assert classification_path.is_file()
+    for operation in (init, update):
+        assert "[File change classification](file-change-classification.md)" in operation
+        assert "追加・更新したファイルを分類して完了報告へ件数を出力する" in operation
+
+    # 大分類、内訳、利用者向け集計から除外する分類を固定する
+    for marker in (
+        "`Knowledge`",
+        "`Provenance`",
+        "`Support`",
+        "`Internal`",
+        "`pk_category`の`declared`、`extracted`、`derived`",
+        "文書自身の`pk_source_type`",
+        "`Knowledge`と`Provenance`だけを表示する",
+        "`Support`と`Internal`は、各分類の件数、追加・更新件数、ファイル名を利用者へ表示しない",
+        "表示上の合計、追加、更新も、`Knowledge`と`Provenance`のファイルだけで計算する",
+        "両分類が0件でも省略せず、0件として表示する",
+    ):
+        assert marker in classification
 
 
 def test_verify_contract_defines_ordered_content_health_checks() -> None:
