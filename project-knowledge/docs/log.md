@@ -1,5 +1,13 @@
 # ナレッジ log
 
+## 2026-09-02
+
+### init / updateのファイル変更報告を追加
+
+- `Knowledge`、`Provenance`、`Support`、`Internal`の共通分類を独立Referenceへ定義し、通常Conceptは`pk_category`、Referenceは文書自身の`pk_source_type`で内訳を示すようにした。
+- initとupdateは分類Referenceを参照して完了報告に件数を出す。利用者向けの件数と合計は`Knowledge`と`Provenance`だけで計算し、`Support`と`Internal`は表示しない。
+- この方針をUser Statementと実装経緯として保存し、契約テストの成功と、今回未変更の標準Policy文言に残る既存テスト失敗を記録した。
+
 ## 2026-09-01
 
 ### publish現在構造補完コミットのレビューを反映

@@ -1,5 +1,6 @@
 # User Statements
 
+- [init / updateのファイル変更報告の方針](2026-09-02-file-change-reporting.md): 分類規則の独立化、Support/Internalの非表示・合計除外を確認するときに読む。
 - [User Statementの反映ルール](2026-08-31-user-statement-reflection.md): User Statementの追加・更新時に関連Conceptなどへ内容を反映するユーザー指示を確認するときに読む。
 - [inspect専用Skillと出力形式の方針](2026-08-29-inspect-skill-output.md): 専用Skillへの分離、自然言語対応、固定節、集計対象、旧記述の削除を確認するときに読む。
 - [標準Knowledge PolicyをSkillから参照する方針](2026-08-29-standard-policy-reference.md): 標準Policyの同梱場所、`knowledge-policy.md`の参照形式、プロジェクト固有方針の優先規則を確認するときに読む。

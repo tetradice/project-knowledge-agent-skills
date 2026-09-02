@@ -1,5 +1,6 @@
 # Interaction Records
 
+- [init / updateのファイル変更報告の実装](2026-09-02-file-change-reporting-implementation.md): 分類設計、実装、テスト結果、既存失敗との境界を確認するときに読む。
 - [publish現在構造補完コミットのレビュー](2026-09-01-publish-current-structure-review.md): publishの入力源拡張、重複判断、仕様概要に残る旧表現、検証結果を確認するときに読む。
 - [inspect専用Skill化と出力形式変更の実装記録](2026-08-29-inspect-skill-output-implementation.md): 専用Skillへの分離、出力契約、旧記述の削除、検証結果を確認するときに読む。
 - [標準Knowledge Policy参照化の実装記録](2026-08-29-standard-policy-reference-implementation.md): 標準Policyの同梱Reference化、プロジェクト固有方針の優先、検証結果とbaseline更新を確認するときに読む。
