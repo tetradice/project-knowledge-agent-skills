@@ -1,5 +1,6 @@
 # User Statements
 
+- [ファイル変更報告の表示名](2026-09-03-file-change-reporting-labels.md): 利用者向け分類名を日本語で表示し、`derived`を「分析の結果」とする方針を確認するときに読む。
 - [init / updateのファイル変更報告の方針](2026-09-02-file-change-reporting.md): 分類規則の独立化、Support/Internalの非表示・合計除外を確認するときに読む。
 - [User Statementの反映ルール](2026-08-31-user-statement-reflection.md): User Statementの追加・更新時に関連Conceptなどへ内容を反映するユーザー指示を確認するときに読む。
 - [inspect専用Skillと出力形式の方針](2026-08-29-inspect-skill-output.md): 専用Skillへの分離、自然言語対応、固定節、集計対象、旧記述の削除を確認するときに読む。
