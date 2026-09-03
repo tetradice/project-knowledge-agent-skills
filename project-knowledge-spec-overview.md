@@ -41,6 +41,57 @@ Project Knowledgeは、リポジトリ固有の仕様、設計判断、運用知
 
 この境界により、「案内」「構造・格納情報の説明」「保守（構築・追加・更新・検証・修正・設定）」「限定回答」「公開」「構造監査・構造改善」「実務効果の比較」を個別に制御し、Skill自身の品質評価も通常利用から切り離せます。
 
+## フォルダ・ファイル構成
+
+このリポジトリは、利用者に配布するSkillの実装、Skill自身を説明するProject Knowledge、隔離Fixtureで実行する開発者向け評価を分けて管理します。ルート直下の主要な構成は次のとおりです。
+
+```text
+.
+├─ skills/                              # 利用者向けSkillの配布元
+├─ developer-tests/                     # 配布対象外の開発者向けテスト
+├─ project-knowledge/                   # このリポジトリ自身のKnowledge Base
+├─ README.md                             # 導入と利用方法
+├─ AGENTS.md                             # このリポジトリでの作業ルール
+└─ project-knowledge-spec-overview.md    # 外部相談向けの現行仕様概要
+```
+
+`skills/`には、通常の保守を担う`project-knowledge/`と、利用案内、構造説明、Knowledge限定回答、公開、構造監査・改善、実務効果比較を担う専用Skillを置きます。各Skillは、入口となる`SKILL.md`、必要に応じた`agents/openai.yaml`、詳細な規約を分けた`references/`、実装を置く`scripts/`、生成する雛形を置く`templates/`、回帰確認用の`tests/`で構成します。公開Skillでは、公開レイアウトやHTML生成に必要な補助資材も同じSkill配下に置きます。
+
+```text
+skills/
+├─ project-knowledge/
+│  ├─ SKILL.md                           # init/update/verify/fix/configの入口
+│  ├─ references/                        # 形式、根拠、更新、検証、Policyなどの詳細規約
+│  ├─ scripts/                           # 初期化、検証、差分検出、状態・Policy操作
+│  ├─ templates/                         # manifest、Concept、Reference、索引などの雛形
+│  └─ tests/                             # Skill実装の自動テスト
+├─ project-knowledge-help/               # 操作案内
+├─ project-knowledge-inspect/            # 構造・格納情報の読取り専用説明
+├─ project-knowledge-fast-ask/           # Knowledgeだけに基づく限定回答
+├─ project-knowledge-publish/            # Markdown／オフラインHTMLの成果物生成
+├─ project-knowledge-audit/              # 構造監査と明示時のrefactor
+└─ project-knowledge-benchmark/          # Knowledge有無の実務比較
+```
+
+Knowledge Baseは対象プロジェクトの`project-knowledge/`に作成します。`manifest.yml`は形式を識別し、`knowledge-policy.md`は運用方針と設定を持ち、`state.yml`は再構築可能な差分検出状態を持ちます。人が読む本文は`docs/`以下に集約し、Concept、Reference、User Statement、Interaction Recordは索引から辿れるように配置します。対象プロジェクトの実装や設計資料はKnowledge Baseの外に残し、Referenceから相対パスなどで結びます。
+
+```text
+project-knowledge/
+├─ manifest.yml                          # Knowledge Baseの形式識別
+├─ knowledge-policy.md                   # 運用方針と機械可読な設定
+├─ state.yml                             # Git基準などの再構築可能な状態
+└─ docs/
+   ├─ index.md                           # Knowledgeの起点
+   ├─ log.md                             # 追加・更新の記録
+   ├─ concepts/                          # 再利用する仕様・設計・運用知識
+   └─ references/
+      ├─ index.md                        # 根拠資料の索引
+      ├─ user-statements/                # 原文を保持する利用者指示
+      └─ interactions/                   # 作業・対話の記録
+```
+
+`developer-tests/project-knowledge-scenario-test/`は、Skillの配布物と分離した評価ハーネスです。`scenarios/`にQuick、Large、Utilityなどの実行条件、`fixtures/`に隔離した対象プロジェクト、`agents/`にActorとJudgeの設定、`scripts/`に準備・検証・計測・報告の補助処理を置きます。Knowledgeの有無を比較する場合は、No-KBとWith-KBの入力・成果物・評価を混在させず、この配下で再現可能に保管します。
+
 ## データフォーマット
 
 Knowledge Baseは各プロジェクトの`project-knowledge/`に置きます。
