@@ -26,13 +26,26 @@ Conceptの`sources[].pk_source_type`は根拠の種類であり、Conceptファ�
 
 表示上の合計、追加、更新も、`Knowledge`と`Provenance`のファイルだけで計算する。両分類が0件でも省略せず、0件として表示する。`pk_category`と`pk_source_type`の内訳は0件の項目を省略してよい。
 
+分類と内訳の内部値はfrontmatterや集計処理でそのまま維持し、利用者向けの完了報告では次の日本語名を使用する。
+
+| 内部値 | 利用者向け表示名 |
+| --- | --- |
+| `Knowledge` | ナレッジ文書 |
+| `Provenance` | 根拠資料 |
+| `declared` | 方針・判断 |
+| `extracted` | 資料から抽出した情報 |
+| `derived` | 分析の結果 |
+| `user-statement` | ユーザー指示 |
+| `interaction-record` | 作業・対話記録 |
+| `reference-document` | 参照資料 |
+
 ```text
-追加・更新したKnowledgeファイル: 3（追加2、更新1）
-- Knowledge: 2（追加1、更新1）
-  - declared: 1
-  - extracted: 1
-- Provenance: 1（追加1、更新0）
-  - user-statement: 1
+追加・更新したナレッジ関連ファイル: 3（追加2、更新1）
+- ナレッジ文書: 2（追加1、更新1）
+  - 方針・判断: 1
+  - 資料から抽出した情報: 1
+- 根拠資料: 1（追加1、更新0）
+  - ユーザー指示: 1
 ```
 
 収集方針だけを変更した場合など、`Support`だけが変わった操作では表示上の合計は0件になる。件数とは別に、操作結果として変更した方針やKnowledgeの要点は簡潔に報告してよい。

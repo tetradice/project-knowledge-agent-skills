@@ -443,6 +443,21 @@ def test_init_and_update_report_only_user_facing_file_counts() -> None:
     ):
         assert marker in classification
 
+    # 内部値は維持し、利用者向けの分類名だけを日本語で表示する
+    for internal_value, display_name in (
+        ("`Knowledge`", "ナレッジ文書"),
+        ("`Provenance`", "根拠資料"),
+        ("`declared`", "方針・判断"),
+        ("`extracted`", "資料から抽出した情報"),
+        ("`derived`", "分析の結果"),
+        ("`user-statement`", "ユーザー指示"),
+        ("`interaction-record`", "作業・対話記録"),
+        ("`reference-document`", "参照資料"),
+    ):
+        assert f"| {internal_value} | {display_name} |" in classification
+
+    assert "追加・更新したナレッジ関連ファイル" in classification
+
 
 def test_verify_contract_defines_ordered_content_health_checks() -> None:
     """verifyの検証順序と結果分類をSkill契約として固定する。"""
