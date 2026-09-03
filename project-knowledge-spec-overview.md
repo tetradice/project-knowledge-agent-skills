@@ -1,6 +1,6 @@
 # Project Knowledgeスキル群の現行仕様（相談用概要）
 
-最終更新日：2026-09-01
+最終更新日：2026-09-03
 
 外部のチャットへ設計相談するために、現在の仕様を要約したものです。
 
@@ -119,9 +119,13 @@ Knowledge Policyは対象分野の固定リストではなく、情報の将来�
 
 更新頻度は`manual`、`opportunistic`、`aggressive`の3段階です。
 既定は、作業単位の完了時に候補を一度だけ評価する`opportunistic`です。
-このスキル群自身のKnowledge Baseは`manual`です。
+このスキル群自身のKnowledge Baseも`opportunistic`で運用します。
 
 User Statementを追加または更新した場合は、その内容を関連するConceptなどのKnowledgeにも反映し、当該User Statementをsourceとして残します。
+
+`init`と`update`の完了時は、Project Knowledge操作が実際に追加・更新したファイルを分類して件数を報告します。同じファイルを操作中に複数回変更しても最終状態の1ファイルとして数え、調査しただけのプロジェクトファイルは数えません。
+
+利用者向けの合計には、通常Conceptである`Knowledge`と根拠資料である`Provenance`だけを含めます。表示名は「ナレッジ文書」「根拠資料」とし、Conceptの内訳は「方針・判断」「資料から抽出した情報」「分析の結果」、Referenceの内訳は「ユーザー指示」「作業・対話記録」「参照資料」と表示します。案内・履歴・方針などの`Support`と、形式宣言・再構築可能な状態の`Internal`は、件数、合計、ファイル名を利用者へ表示しません。分類規則は、複数の操作から再利用する独立したMarkdown文書で管理します。
 
 ## 根拠と信頼性
 
