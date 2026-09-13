@@ -2,6 +2,11 @@
 
 ## 2026-09-13
 
+### 独立した版契約とリリース境界を記録
+
+- Project Knowledge設定、各Skill、Knowledge形式、OKF、state schemaの版は独立した契約であり、関連する変更だけで連動して上げないことを記録した。
+- 現在のSkill版と、リポジトリ全体のリリースmanifest、changelog、Git tagが未定義である境界を記録した。Skill版をリポジトリリリース版として扱うには、明示的なリリース運用が必要である。
+
 ### Project Knowledgeのルート設定を追加
 
 - `project-knowledge.yaml`をProject Knowledge利用の必須入口とし、設定がなければ既存ディレクトリやmanifestから対象を推測しない方針を記録した。

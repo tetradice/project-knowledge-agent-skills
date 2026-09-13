@@ -1,5 +1,7 @@
 # プロジェクトナレッジ Skill
 
+- [Versioning contracts](versioning-contracts.md): Project Knowledge、Skill、Knowledge format、OKF、state schemaの独立した版契約と、未定義のリポジトリリリース境界を確認するときに読む。
+
 このカテゴリのKnowledgeを選ぶための索引です。
 
 - [プロジェクトナレッジ Skill概要](overview.md): メインSkillと専用help・inspect、verify/fix、audit/refactor、Policy、provenance、learningを確認するときに読む。
