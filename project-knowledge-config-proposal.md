@@ -37,16 +37,11 @@ layers:
 layers:
   - id: default
     path: ./project-knowledge
-    description: >-
-      このプロジェクトの仕様、設計判断、開発手順を保存するナレッジです。
-      プロジェクトに関する調査と、作業で得られた知識の記録に使用します。
-    access: read-write
-    optional: false
-write_target: default
 ```
 
-初期化では、通常の知識の記録に使えるように`access: read-write`と`write_target`を明記する。
-`description`には用途を説明する初期文を入れ、利用者が実際の運用に合わせて編集できるようにする。
+初期化では`id: default`を使い、`description`、`access`、`optional`、`write_target`を省略する。
+この設定は省略規則により、説明なし、`access: read-only`、`optional: false`、`write_target: null`として扱う。
+初期化後に知識を記録する場合は、`access: read-write`を明示する。
 生成元コメントは生成時の要件であり、手書きの設定ファイルの有効性判定には使わない。
 
 `path`は`docs/`ではなく、`manifest.yml`、`knowledge-policy.md`、`docs/`を含むナレッジ管理ディレクトリを指す。
@@ -59,7 +54,7 @@ write_target: default
 | `layers` | オブジェクトの配列 | 省略不可 | 利用対象とするナレッジの一覧 |
 | `layers[].id` | 空でない文字列 | 省略不可 | パス変更後も維持できる識別子 |
 | `layers[].path` | 空でない文字列 | 省略不可 | 設定ファイルからの相対パス |
-| `layers[].description` | 文字列 | 説明なし | LLMがレイヤーの用途や対象範囲を判断するための自然言語の説明 |
+| `layers[].description` | 文字列 | `id: default`の場合だけ省略可。それ以外は必須 | LLMがレイヤーの用途や対象範囲を判断するための自然言語の説明 |
 | `layers[].access` | `read-only`または`read-write` | `read-only` | そのレイヤーへの書き込み可否 |
 | `layers[].optional` | boolean | `false` | ディレクトリが存在しない場合に、そのレイヤーを省略できるか |
 | `write_target` | レイヤーIDまたは`null` | 下記の規則 | 更新先を明示しない操作で使用する既定の書き込み先 |
@@ -72,10 +67,12 @@ write_target: default
 `id`は`[a-z][a-z0-9_-]*`に制限し、設定内で一意にする。
 表示名が必要になるまでは`id`を表示にも使う。
 
-`description`は省略可能で、複数行の自然言語も記述できる。
-省略、空文字列、空白だけの文字列は「説明なし」として扱い、`null`や文字列以外は型エラーとする。
+`description`は`id`が`default`以外の場合に必須とし、複数行の自然言語も記述できる。
+`default`以外では、省略、空文字列、空白だけの文字列を設定エラーとする。
+`id: default`の場合は省略可能で、省略、空文字列、空白だけの文字列を「説明なし」として扱う。
+どのIDでも、`null`や文字列以外は型エラーとする。
 LLMはこの説明を、質問に関連するレイヤーの選択、内容の適用範囲の理解、記録先の候補提示に使う。
-説明がないレイヤーも利用対象に含め、説明だけを根拠に関連するナレッジが存在しないと断定しない。
+説明がない`default`レイヤーも利用対象に含め、説明だけを根拠に関連するナレッジが存在しないと断定しない。
 説明は`access`、`write_target`、各レイヤーのPolicyを上書きせず、レイヤー間の正しさの優先順位も定めない。
 
 `write_target`を省略した場合、登録されたレイヤーが1件で、かつ`read-write`の場合に限り、そのIDを採用する。
@@ -230,9 +227,11 @@ write_target: local
 - 子ディレクトリから実行しても、設定所在地を基準に同じパスを得る。
 - 明示ルート、Git境界、ワークスペース境界、ネスト設定の探索規則を守る。
 - `layers: []`は有効な利用対象ゼロの設定とし、`layers: [{}]`は設定エラーにする。
-- `description`の省略と複数行文字列を受け付け、説明をLLMの処理判断に利用できるようにする。
+- `id: default`では`description`の省略を受け付け、それ以外では省略、空文字列、空白だけの文字列を設定エラーにする。
+- `description`の複数行文字列を受け付け、説明をLLMの処理判断に利用できるようにする。
 - `description`によって書き込み制限、既定の書き込み先、Policyを上書きしない。
 - 初期化時のYAMLは必須項目を含み、先頭行に`project-knowledge` Skillで生成したことを示すコメントを持つ。
+- 初期化時は`id: default`を使い、`description`、`access`、`optional`、`write_target`を生成しない。
 - 未知キー、重複キー、型違い、無効な書き込み先で停止する。
 - プロジェクト外への脱出、実体パスの重複、レイヤーの親子関係を拒否する。
 - `optional`は欠落だけを許容し、破損や権限不足を隠さない。
