@@ -11,6 +11,10 @@ sources:
   pk_source_type: project-artifact
 - resource: ../../../skills/project-knowledge/references/project-config.md
   pk_source_type: change-implementation
+- resource: ../references/user-statements/2026-09-13-root-configuration.md
+  pk_source_type: user-statement
+- resource: ../references/interactions/2026-09-13-root-configuration-implementation.md
+  pk_source_type: interaction-record
 ---
 # Project Knowledgeのルート設定
 

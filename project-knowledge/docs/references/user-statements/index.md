@@ -1,5 +1,6 @@
 # User Statements
 
+- [Project Knowledgeのルート設定](2026-09-13-root-configuration.md): 設定ファイルを必須入口とする方針、必須versionとレイヤー項目、descriptionの条件、初期生成項目を確認するときに読む。
 - [ファイル変更報告の表示名](2026-09-03-file-change-reporting-labels.md): 利用者向け分類名を日本語で表示し、`derived`を「分析の結果」とする方針を確認するときに読む。
 - [init / updateのファイル変更報告の方針](2026-09-02-file-change-reporting.md): 分類規則の独立化、Support/Internalの非表示・合計除外を確認するときに読む。
 - [User Statementの反映ルール](2026-08-31-user-statement-reflection.md): User Statementの追加・更新時に関連Conceptなどへ内容を反映するユーザー指示を確認するときに読む。
