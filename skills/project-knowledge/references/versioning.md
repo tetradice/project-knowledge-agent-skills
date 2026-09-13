@@ -1,9 +1,10 @@
 # Version contracts
 
-Project Knowledgeは、用途の異なる四つの版を独立して管理する。
+Project Knowledgeは、用途の異なる五つの版を独立して管理する。いずれもユーザーの指示なしに版を上げない。
 
 | 版 | Source of truth | 形式 | 用途 |
 | --- | --- | --- | --- |
+| ルート設定版 | `project-knowledge.yaml`の`version` | 文字列`"1.0"` | プロジェクトの利用レイヤー設定 |
 | Skill版 | 各`SKILL.md`の`metadata.version` | SemVer `MAJOR.MINOR.PATCH` | Skillの公開動作 |
 | Knowledge形式版 | `project-knowledge/manifest.yml`の`format_version` | `MAJOR.MINOR` | Knowledgeディレクトリのデータ形式。現在は`1.0` |
 | OKF版 | `project-knowledge/docs/index.md`の`okf_version` | OKF仕様に従う | `docs/` bundle規約 |
@@ -17,7 +18,7 @@ Project Knowledgeは、用途の異なる四つの版を独立して管理する
 - MINOR: 後方互換な機能の追加。
 - MAJOR: 操作、入出力、対応形式、安全境界の非互換変更。
 
-関連Skillは互いに独立した版を持つ。同じKnowledge形式に対応していても、変更の影響を受けたSkillだけを更新する。
+関連Skillは互いに独立した版を持つ。ユーザーが版の更新を指示した場合に限り、変更の影響を受けたSkillの版を更新する。
 
 ## Knowledge形式版
 
@@ -25,3 +26,9 @@ Project Knowledgeは、用途の異なる四つの版を独立して管理する
 - MAJOR: 既存readerでは安全に解釈できない変更。
 
 形式を変更するときは、形式仕様と対応Skill版を同時に更新する。
+
+## ルート設定の版
+
+`project-knowledge.yaml`の`version`は必須の文字列`"1.0"`とする。
+Skill版、Knowledge形式版、state版から独立し、ユーザーの指示なしに自動で上げない。
+欠落、数値型、未対応版はエラーとし、推測で変換しない。

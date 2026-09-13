@@ -1,5 +1,7 @@
 # Rebuildable state
 
+保存先はルート設定で解決したレイヤー内とする。読み取り専用レイヤーではstateとsnapshotも書き込まない。読み取り時の欠落や破損はメモリ内で扱い、フルスキャンへ戻す。
+
 `state.yml`はProject Knowledgeの正本ではなく、増分更新を効率化するための再構築可能な機械状態を保持する。Knowledge本文、index、log、manifest、Policyの内容をstateから推測して変更してはならない。
 
 ```yaml
@@ -26,10 +28,10 @@ Knowledge本文、index、logの更新とvalidationがすべて成功した後�
 
 ## Non-Git mode
 
-標準snapshot位置は次に固定する。
+標準snapshot位置は、設定で解決したレイヤー内の次の位置とする。
 
 ```text
-<project-root>/project-knowledge/.cache/source-snapshot.json
+<resolved-knowledge-root>/.cache/source-snapshot.json
 ```
 
 現在のfile hashが前回値と異なる、または前回値がなければ`changed`、前回snapshotだけに存在すれば`removed`とする。snapshotがない、JSONとして壊れている、想定するstring-to-string mappingでない場合は空snapshotとしてフルスキャンする。

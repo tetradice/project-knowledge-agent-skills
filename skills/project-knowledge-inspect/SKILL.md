@@ -7,12 +7,22 @@ metadata:
 
 # Project Knowledge Inspect
 
+## 対象プロジェクトの解決
+
+このSkillは共通の設定解決に`project-knowledge` Skillを必要とする。
+プロジェクトのKnowledgeへアクセスする前に[ルート設定](../project-knowledge/references/project-config.md)に従って`project_config.py`を実行する。
+`project-knowledge.yaml`がなければ対象外とし、固定ディレクトリから推測しない。一般的な利用案内は設定なしでも説明できる。
+以後の`project-knowledge/`表記は解決済みのレイヤーパスを意味する。
+`description`を用途と適用範囲の判断に使い、書き込み前には`--write`で対象を確認する。読み取り専用レイヤーへstateや成果物も保存しない。
+設定の`version: "1.0"`は必須で、ユーザーの指示なしに版を上げない。複数レイヤーの同時利用は未対応とする。
+
+
 現在のProject Knowledgeを読み取り、利用者向けの概要を返すread-only Skillである。
 内容の正確性、鮮度、構造品質、改善方法は評価せず、ファイルを作成、更新、削除しない。
 
 ## 読み取り前の確認
 
-1. `project-knowledge/manifest.yml`の有無を確認する。
+1. ルート設定を解決し、登録されたレイヤーの`manifest.yml`の有無を確認する。設定がなければ対象外、空の`layers`なら対象ゼロと報告する。
 2. manifestが`format: project-knowledge`かつ`format_version: "1.0"`であることを確認する。
 3. 未初期化の場合は、その状態だけを報告して読み取りを止める。
 4. manifestが壊れている場合や未対応形式の場合は、安全に解釈できないことだけを報告して読み取りを止める。
@@ -25,7 +35,7 @@ metadata:
 2. `docs/index.md`と、そこから到達できるnested `index.md`
 3. Knowledge文書のfrontmatter、見出し、index上の説明
 
-Project Knowledge外のソースコードや設定、Knowledgeが参照するsource本文は調査しない。
+対象解決に必要なルート設定以外のProject Knowledge外のソースコードや設定、Knowledgeが参照するsource本文は調査しない。
 Raw ReferenceやInteraction Recordの本文を大量に転記しない。
 
 ## 出力形式

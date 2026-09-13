@@ -1,5 +1,13 @@
 # ナレッジ log
 
+## 2026-09-13
+
+### Project Knowledgeのルート設定を追加
+
+- `project-knowledge.yaml`をProject Knowledge利用の必須入口とし、設定がなければ既存ディレクトリやmanifestから対象を推測しない方針を記録した。
+- ルート設定の必須`version: "1.0"`、`layers`、レイヤーの`id`・`path`、初期実装の0〜1レイヤー制限、`default`以外のdescription要件を記録した。ユーザー指示なしに版を上げない。
+- 初期生成設定は生成元コメントと必須の最小項目だけを含み、`access`省略時は`read-only`となる。書き込みには`access: read-write`を明示する。
+
 ## 2026-09-03
 
 ### ファイル変更報告の表示名を日本語化

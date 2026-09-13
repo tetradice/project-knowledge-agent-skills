@@ -1,5 +1,10 @@
 # Runner workflow
 
+baseline自身の`project-knowledge.yaml`から参照先を解決する。設定がない過去commitは未登録として停止する。
+Knowledgeなし条件では設定ファイルと登録されたナレッジだけを除去し、独自配置でも元履歴の隔離を維持する。
+本文の`project-knowledge/`は登録されたレイヤーパスとして読み替える。
+
+
 ## 1. 実行条件を固定する
 
 対象repository、task本文、baseline refを確認する。build/test/lint commandはCI、manifest、READMEに明記されたものだけを選び、次のYAMLとして保存する。確定できない種類は省略する。

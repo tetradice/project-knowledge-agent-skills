@@ -18,7 +18,25 @@ INSPECT_ROOT = SKILLS_ROOT / "project-knowledge-inspect"
 POLICY_SETTINGS = "policy_settings.py"
 
 
+@pytest.fixture(autouse=True)
+def registered_writable_project(tmp_path: Path, request: pytest.FixtureRequest) -> None:
+    """既存の保守テストを明示登録された書き込み可能プロジェクトで実行する。"""
+
+    (tmp_path / "project-knowledge.yaml").write_text(
+        'version: "1.0"\nlayers:\n  - id: default\n    path: ./project-knowledge\n    access: read-write\n',
+        encoding="utf-8",
+    )
+    if request.node.name.startswith(("test_policy_settings", "test_detect_changes")):
+        root = tmp_path / "project-knowledge"
+        root.mkdir(exist_ok=True)
+        (root / "manifest.yml").write_text('format: project-knowledge\nformat_version: "1.0"\n', encoding="utf-8")
+
+
 def run_script(name: str, *args: object, skill_root: Path = SKILL_ROOT) -> subprocess.CompletedProcess[str]:
+    if name in ("validate_knowledge.py", POLICY_SETTINGS):
+        target = Path(args[0])
+        project = target.parent.parent if name == POLICY_SETTINGS else target.parent
+        args = (*args, "--project-root", project)
     # 所有Skillのscriptsから対象コマンドを実行
     return subprocess.run(
         [sys.executable, str(skill_root / "scripts" / name), *(str(arg) for arg in args)],
@@ -75,7 +93,7 @@ def test_standard_policy_reference_contains_default_principles() -> None:
     # 生成先から分離した標準の保存・除外・構成原則を固定
     assert "持続的なプロジェクト固有知識を保存する" in standard_policy
     assert "将来の利用価値が高い情報を優先する" in standard_policy
-    assert "秘密情報などは原則として保存しない" in standard_policy
+    assert "ソースコードから容易かつ確実に再取得でき" in standard_policy
     assert "対象領域や構成は固定せず" in standard_policy
 
 
@@ -124,7 +142,7 @@ def test_init_creates_management_skeleton_only(tmp_path: Path) -> None:
 
 
 def test_policy_settings_reads_frontmatter(tmp_path: Path) -> None:
-    policy = tmp_path / "knowledge-policy.md"
+    policy = tmp_path / "project-knowledge" / "knowledge-policy.md"
     policy.write_text(
         "---\nknowledge:\n  human_readable: true\nlearning:\n  mode: aggressive\n---\n# Policy\n",
         encoding="utf-8",
@@ -137,7 +155,7 @@ def test_policy_settings_reads_frontmatter(tmp_path: Path) -> None:
 
 
 def test_policy_settings_updates_known_keys_only(tmp_path: Path) -> None:
-    policy = tmp_path / "knowledge-policy.md"
+    policy = tmp_path / "project-knowledge" / "knowledge-policy.md"
     body = "# Policy\n\n<!-- keep -->\n本文を保持する。\n"
     policy.write_text(
         "---\ncustom:\n  future: keep\nknowledge:\n  human_readable: false # keep comment\n"
@@ -163,7 +181,7 @@ def test_policy_settings_updates_known_keys_only(tmp_path: Path) -> None:
 
 
 def test_policy_settings_preserves_crlf_markdown_body(tmp_path: Path) -> None:
-    policy = tmp_path / "knowledge-policy.md"
+    policy = tmp_path / "project-knowledge" / "knowledge-policy.md"
     body = b"# Policy\r\n\r\nBody\r\n"
     policy.write_bytes(
         b"---\r\nknowledge:\r\n  human_readable: false\r\n"
@@ -188,7 +206,7 @@ def test_policy_settings_stops_on_invalid_frontmatter(
     tmp_path: Path,
     frontmatter: str,
 ) -> None:
-    policy = tmp_path / "knowledge-policy.md"
+    policy = tmp_path / "project-knowledge" / "knowledge-policy.md"
     original = f"---\n{frontmatter}---\n# Policy\n"
     policy.write_text(original, encoding="utf-8")
 
@@ -199,7 +217,7 @@ def test_policy_settings_stops_on_invalid_frontmatter(
 
 
 def test_policy_settings_requires_frontmatter(tmp_path: Path) -> None:
-    policy = tmp_path / "knowledge-policy.md"
+    policy = tmp_path / "project-knowledge" / "knowledge-policy.md"
     original = "# Policy\n"
     policy.write_text(original, encoding="utf-8")
 
@@ -399,7 +417,8 @@ def test_init_contract_distinguishes_normal_and_empty_initialization() -> None:
     assert "「空で初期化」の明示があれば" in init
     assert "追加・更新したファイルの分類件数は完了報告へ出力する" in init
     assert "通常の`init`を、骨組みだけで完了としてはならない" in init
-    assert "通常の`init`はその後のプロジェクト調査とKnowledge本文の生成まで" in init
+    assert "本文生成後に" in init
+    assert "--prepare" in init
 
     # 通常初期化は代表sourceを調査して保存価値とprovenanceを判定する
     for marker in (
@@ -698,9 +717,9 @@ def test_detect_changes_with_git(tmp_path: Path) -> None:
     tracked = tmp_path / "tracked.txt"
     tracked.write_text("one", encoding="utf-8")
     knowledge_root = tmp_path / "project-knowledge"
-    knowledge_root.mkdir()
+    knowledge_root.mkdir(exist_ok=True)
     (knowledge_root / ".gitignore").write_text("state.yml\n.cache/\n", encoding="utf-8")
-    subprocess.run(["git", "add", "tracked.txt", "project-knowledge/.gitignore"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "add", "tracked.txt", "project-knowledge/.gitignore", "project-knowledge/manifest.yml", "project-knowledge.yaml"], cwd=tmp_path, check=True)
     subprocess.run(["git", "commit", "-qm", "fixture"], cwd=tmp_path, check=True)
     tracked.write_text("two", encoding="utf-8")
     (tmp_path / "staged.txt").write_text("staged", encoding="utf-8")
@@ -713,7 +732,7 @@ def test_detect_changes_with_git(tmp_path: Path) -> None:
 
     assert payload["mode"] == "git"
     assert payload["full_scan"] is True
-    assert payload["changed"] == ["project-knowledge/.gitignore", "staged.txt", "tracked.txt", "untracked.txt"]
+    assert payload["changed"] == ["project-knowledge.yaml", "project-knowledge/.gitignore", "project-knowledge/manifest.yml", "staged.txt", "tracked.txt", "untracked.txt"]
 
     # checkpointはcommit位置だけを進め、未commit変更は次回も検出
     checkpoint = run_script("detect_changes.py", tmp_path, "--write-baseline")
@@ -736,9 +755,9 @@ def test_detect_changes_invalidates_non_ancestor_baseline(tmp_path: Path) -> Non
     tracked = tmp_path / "tracked.txt"
     tracked.write_text("one", encoding="utf-8")
     knowledge_root = tmp_path / "project-knowledge"
-    knowledge_root.mkdir()
+    knowledge_root.mkdir(exist_ok=True)
     (knowledge_root / ".gitignore").write_text("state.yml\n.cache/\n", encoding="utf-8")
-    subprocess.run(["git", "add", "tracked.txt", "project-knowledge/.gitignore"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "add", "tracked.txt", "project-knowledge/.gitignore", "project-knowledge/manifest.yml", "project-knowledge.yaml"], cwd=tmp_path, check=True)
     subprocess.run(["git", "commit", "-qm", "first"], cwd=tmp_path, check=True)
     original_branch = subprocess.run(
         ["git", "branch", "--show-current"], cwd=tmp_path, capture_output=True, text=True, check=True
@@ -769,7 +788,7 @@ def test_detect_changes_invalidates_non_ancestor_baseline(tmp_path: Path) -> Non
     assert original_branch
     assert payload["baseline"] is None
     assert payload["full_scan"] is True
-    assert payload["changed"] == ["project-knowledge/.gitignore", "tracked.txt"]
+    assert payload["changed"] == ["project-knowledge.yaml", "project-knowledge/.gitignore", "project-knowledge/manifest.yml", "tracked.txt"]
 
     # rebaseやforce-pushでobjectが消失した場合も同じ復旧経路を使う
     state.write_text(

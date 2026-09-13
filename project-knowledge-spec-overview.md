@@ -1,5 +1,13 @@
 # Project Knowledgeスキル群の現行仕様（相談用概要）
 
+## ルート設定（必須）
+
+`project-knowledge.yaml`の存在を利用条件とし、`version: "1.0"`と`layers`、各要素の`id`、`path`を必須とします。
+`description`は`default`以外で必須です。初期化設定は`access`を省略するため読み取り専用となり、初期化後の更新には`access: read-write`が必要です。
+現在は0〜1レイヤーに対応し、複数レイヤーは未対応エラーになります。設定の版はユーザーの指示なしに上げません。
+本文中の`project-knowledge/`は既定配置の例です。実際のパス、探索規則、初期化と移行は[ルート設定仕様](skills/project-knowledge/references/project-config.md)に従います。
+
+
 最終更新日：2026-09-03
 
 外部のチャットへ設計相談するために、現在の仕様を要約したものです。

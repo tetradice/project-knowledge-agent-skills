@@ -1,5 +1,8 @@
 # config
 
+最初に[ルート設定](project-config.md)から対象を解決する。ルート設定の表示は`project_config.py --project-root <project-root>`を使い、変更は明示されたキーだけに限定する。設定の`version`をユーザーの指示なしに上げない。
+`access`の変更はルート設定で行い、Policyの`learning.mode`や`knowledge.human_readable`とは独立して扱う。
+
 Knowledgeの育成・記述方針に属する設定を表示・変更する。保存先は`knowledge-policy.md`のYAML frontmatterであり、Policy本文や未知キーを変更しない。
 
 管理する設定は次のとおり。
@@ -17,6 +20,6 @@ learning:
 
 ユーザーが「今後は自動的に更新して」「明示時だけ更新して」などと自然言語で指示した場合も設定変更として処理する。
 
-表示または変更には`uv run <skill>/scripts/policy_settings.py project-knowledge/knowledge-policy.md`を使う。変更時は`--human-readable true|false`または`--learning-mode manual|opportunistic|aggressive`を指定する。
+表示または変更には`uv run <skill>/scripts/policy_settings.py <knowledge-root>/knowledge-policy.md --project-root <project-root>`を使う。変更時は`--human-readable true|false`または`--learning-mode manual|opportunistic|aggressive`を指定する。書き込み可能レイヤーを明示する場合は`--layer <id>`も指定する。
 
 壊れたYAML、未知のmode、不正型では推測せず停止する。publishの出力形式と対象範囲は`project-knowledge-publish`の実行時指定であり、ここでは永続化しない。

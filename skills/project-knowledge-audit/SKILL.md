@@ -7,6 +7,16 @@ metadata:
 
 # Project Knowledge Baseの構造監査・構造改善
 
+## 対象プロジェクトの解決
+
+このSkillは共通の設定解決に`project-knowledge` Skillを必要とする。
+プロジェクトのKnowledgeへアクセスする前に[ルート設定](../project-knowledge/references/project-config.md)に従って`project_config.py`を実行する。
+`project-knowledge.yaml`がなければ対象外とし、固定ディレクトリから推測しない。一般的な利用案内は設定なしでも説明できる。
+以後の`project-knowledge/`表記は解決済みのレイヤーパスを意味する。
+`description`を用途と適用範囲の判断に使い、書き込み前には`--write`で対象を確認する。読み取り専用レイヤーへstateや成果物も保存しない。
+設定の`version: "1.0"`は必須で、ユーザーの指示なしに版を上げない。複数レイヤーの同時利用は未対応とする。
+
+
 明示的に呼び出された場合だけ、Knowledge Baseの構造品質を診断または改善する。通常の文書レビュー、一般的な「整理して」「改善して」、内容・根拠・鮮度・形式の正確性検証から自動選択しない。
 
 ## 操作を選ぶ

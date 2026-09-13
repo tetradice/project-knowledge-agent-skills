@@ -35,6 +35,12 @@ def initialize_knowledge(workspace: Path) -> None:
     )
     assert result.returncode == 0, result.stderr
 
+    # この保守シナリオでは初期化後の更新を明示的に有効化
+    config = workspace / "project-knowledge.yaml"
+    data = yaml.safe_load(config.read_text(encoding="utf-8"))
+    data["layers"][0]["access"] = "read-write"
+    config.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+
 
 def add_concept(workspace: Path, sources: list[dict[str, str]] | None = None) -> Path:
     """テスト用の分類済みConceptを追加する。"""

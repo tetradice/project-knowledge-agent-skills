@@ -5,7 +5,7 @@
 ## 実行手順
 
 1. `uv run --with pyyaml <runner> large prepare large-lifecycle`を実行する。出力された`large.json`が隔離workspace、version、Change Set、step結果を保持する。Largeは明示実行時だけ開始し、通常CIやQuickから起動しない。
-2. `agents/scenarios.yml`の`large-lifecycle.actor`設定で独立Actorを起動する。Actorへ渡すのはworkspace、開発中checkoutの`project-knowledge/SKILL.md`、依頼`このプロジェクトのProject Knowledgeを初期構築してください。`だけとし、期待値、Change Set、Judge rubricを渡さない。
+2. `agents/scenarios.yml`の`large-lifecycle.actor`設定で独立Actorを起動する。Actorへ渡すのはworkspace、開発中checkoutの`project-knowledge/SKILL.md`、依頼`このプロジェクトのProject Knowledgeを初期構築してください。今後の更新のため、初期化後にdefaultレイヤーのaccessをread-writeへ変更してください。`だけとし、期待値、Change Set、Judge rubricを渡さない。
 3. Actor終了後、`session record <large.json> actor <session-id> --agent-path <agent-path> --step initial`でsessionを記録し、`large validate <large.json>`を実行する。
 4. `initial`、`update-06`、`update-12`では、Quickと同じ6観点と`scenarios/large-lifecycle/expectations.yml`で独立Judgeを実行する。JudgeはsourceとKnowledgeを読み取り専用で比較し、`large.json`と同じdirectoryの`judges/<step>.json`だけへQuickと同じJSON契約を書き込む。終了後は`session record <large.json> judge ... --step <step>`で記録する。
 5. `large advance <large.json>`で次のChange Setを適用し、独立Git commitを作る。続いて新しい独立Actorへ`このプロジェクトのProject Knowledgeを更新してください。`とworkspace、Project Knowledge Skillだけを渡す。Actor終了後にsession記録、`large validate`を行う。この手順を全12 Change Setで繰り返す。

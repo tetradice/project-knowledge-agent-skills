@@ -1,0 +1,6 @@
+# この設定ファイルは project-knowledge skill で生成されました。
+version: "1.0"
+layers:
+  - id: default
+    path: ./project-knowledge
+    access: read-write

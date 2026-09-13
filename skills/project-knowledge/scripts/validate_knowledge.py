@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -37,14 +38,6 @@ ACTOR_PATTERN = re.compile(
     r"^(?:human:[A-Za-z0-9_.@-]+|process:[A-Za-z0-9_.:/-]+|[a-z0-9][a-z0-9-]*/\d+\.\d+\.\d+)$"
 )
 Finding = dict[str, str]
-
-
-def _root(path: Path) -> Path:
-    candidate = path.resolve()
-    if candidate.name == "project-knowledge":
-        return candidate
-    child = candidate / "project-knowledge"
-    return child if child.exists() else candidate
 
 
 def _mapping(path: Path) -> dict[str, Any] | None:
@@ -116,10 +109,23 @@ def read_markdown(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("knowledge_root", type=Path)
+    parser.add_argument("--project-root", type=Path)
+    parser.add_argument("--layer")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
-    root = _root(args.knowledge_root)
+    from project_config import ConfigError, registered_path
+
+    # manifestの不正は検査結果として扱うが、設定の存在は必須
+    try:
+        root = registered_path(args.knowledge_root, project_root=args.project_root,
+                               layer_id=args.layer, check_manifest=False)
+    except ConfigError as exc:
+        if args.json:
+            print(json.dumps([{"severity": "high", "code": "invalid-project-config", "detail": str(exc)}]))
+        else:
+            print(f"error: {exc}", file=sys.stderr)
+        return 2
     docs = root / "docs"
     findings: list[Finding] = []
     check_manifest(findings, root)

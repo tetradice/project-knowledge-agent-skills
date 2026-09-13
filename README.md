@@ -1,5 +1,13 @@
 # project-knowledge-agent-skills
 
+## ルート設定（必須）
+
+`project-knowledge.yaml`の存在を利用条件とし、`version: "1.0"`と`layers`、各要素の`id`、`path`を必須とします。
+`description`は`default`以外で必須です。初期化設定は`access`を省略するため読み取り専用となり、初期化後の更新には`access: read-write`が必要です。
+現在は0〜1レイヤーに対応し、複数レイヤーは未対応エラーになります。設定の版はユーザーの指示なしに上げません。
+本文中の`project-knowledge/`は既定配置の例です。実際のパス、探索規則、初期化と移行は[ルート設定仕様](skills/project-knowledge/references/project-config.md)に従います。
+
+
 AIエージェントが、プロジェクト固有の仕様・設計判断・実装・運用知識を継続的に整理するAgent Skillです。
 
 ## インストール

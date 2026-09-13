@@ -23,6 +23,9 @@ def create_repository(root: Path, with_knowledge: bool = True) -> Path:
     repository.mkdir(parents=True)
     (repository / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
     if with_knowledge:
+        (repository / "project-knowledge.yaml").write_text(
+            'version: "1.0"\nlayers:\n  - id: default\n    path: ./project-knowledge\n', encoding="utf-8"
+        )
         knowledge = repository / "project-knowledge"
         knowledge.mkdir()
         (knowledge / "manifest.yml").write_text('format: project-knowledge\nformat_version: "1.0"\n', encoding="utf-8")
@@ -99,8 +102,34 @@ def test_prepare_rejects_dirty_and_missing_knowledge(tmp_path: Path) -> None:
     with pytest.raises(RUNNER["BenchmarkError"], match="clean"):
         RUNNER["prepare"](dirty, create_task(tmp_path / "dirty"), output_root=tmp_path / "runs-dirty")
     missing = create_repository(tmp_path / "missing", with_knowledge=False)
-    with pytest.raises(RUNNER["BenchmarkError"], match="manifest"):
+    with pytest.raises(RUNNER["BenchmarkError"], match="not registered"):
         RUNNER["prepare"](missing, create_task(tmp_path / "missing"), output_root=tmp_path / "runs-missing")
+
+
+def test_prepare_uses_config_from_baseline_and_custom_path(tmp_path: Path) -> None:
+    """過去commitの設定で独自配置を解決し、設定とKnowledgeだけを除去する。"""
+
+    repository = create_repository(tmp_path)
+    git(repository, "mv", "project-knowledge", "custom-knowledge")
+    config = repository / "project-knowledge.yaml"
+    config.write_text('version: "1.0"\nlayers:\n  - id: team\n    path: ./custom-knowledge\n    description: Team decisions\n', encoding="utf-8")
+    git(repository, "add", "-A")
+    git(repository, "commit", "-m", "custom configuration")
+    baseline = git(repository, "rev-parse", "HEAD").stdout.strip()
+    config.write_text('version: "1.0"\nlayers: []\n', encoding="utf-8")
+    git(repository, "commit", "-am", "disable current knowledge")
+    descriptor_path = RUNNER["prepare"](repository, create_task(tmp_path), baseline=baseline, output_root=tmp_path / "runs")
+    try:
+        descriptor = RUNNER["read_json"](descriptor_path)
+        without = Path(descriptor["candidates"]["no_knowledge"]["workspace"])
+        with_kb = Path(descriptor["candidates"]["with_knowledge"]["workspace"])
+        assert not (without / "project-knowledge.yaml").exists()
+        assert not (without / "custom-knowledge").exists()
+        assert (with_kb / "custom-knowledge" / "manifest.yml").is_file()
+        assert "./custom-knowledge" in (with_kb / "project-knowledge.yaml").read_text(encoding="utf-8")
+        assert (without / "app.py").read_bytes() == (with_kb / "app.py").read_bytes()
+    finally:
+        cleanup(descriptor_path)
 
 
 def test_evaluate_preserves_workspace_and_records_checks(tmp_path: Path) -> None:

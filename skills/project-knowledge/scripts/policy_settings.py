@@ -224,10 +224,19 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("policy", type=Path)
+    parser.add_argument("--project-root", type=Path)
+    parser.add_argument("--layer")
     parser.add_argument("--human-readable", choices=("true", "false"))
     parser.add_argument("--learning-mode", choices=tuple(sorted(LEARNING_MODES)))
     args = parser.parse_args(argv)
+    from project_config import ConfigError, registered_path
+
     try:
+        # 登録先と書き込み可否を確認してからPolicyへアクセス
+        args.policy = registered_path(
+            args.policy, policy=True, layer_id=args.layer, project_root=args.project_root,
+            write=args.human_readable is not None or args.learning_mode is not None,
+        )
         if args.human_readable is None and args.learning_mode is None:
             settings = read_policy_settings(args.policy)
         else:
@@ -243,7 +252,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"knowledge.human_readable: {str(settings.human_readable).lower()}")
         print(f"learning.mode: {settings.learning_mode}")
         return 0
-    except (OSError, UnicodeError, PolicySettingsError) as exc:
+    except (OSError, UnicodeError, PolicySettingsError, ConfigError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 

@@ -26,6 +26,8 @@ SKILL_NAMES = (
 def run(script: Path, *args: object) -> subprocess.CompletedProcess[str]:
     """指定したPythonスクリプトを実行する。"""
 
+    if script == VALIDATE:
+        args = (*args, "--project-root", Path(args[0]).parent)
     return subprocess.run(
         ["uv", "run", str(script), *(str(arg) for arg in args)],
         capture_output=True,

@@ -13,6 +13,10 @@ sources:
   pk_source_type: user-statement
 - resource: ../../../skills/project-knowledge/references/data-formats/1.0.md
   pk_source_type: change-implementation
+- resource: ../../../project-knowledge-config-proposal.md
+  pk_source_type: project-artifact
+- resource: ../../../skills/project-knowledge/references/project-config.md
+  pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge/references/standard-knowledge-policy.md
   pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge/scripts/validate_knowledge.py
@@ -21,6 +25,12 @@ sources:
   pk_source_type: change-implementation
 ---
 # Project Knowledge形式1.0
+
+## ルート設定
+
+`project-knowledge.yaml`はプロジェクトから利用するKnowledge bundleを登録する入口であり、bundle内の`manifest.yml`とは責務が異なる。ルート設定は配置とアクセスを解決し、`manifest.yml`はbundleの形式を宣言する。
+
+ルート設定の`version`は文字列`"1.0"`、`layers`、各レイヤーの`id`と`path`を必須とする。初期実装は0〜1レイヤーだけを受け付け、2件以上は拒否する。`id: default`以外では非空の`description`を必須にし、`access`を省略した場合は`read-only`とする。ユーザーの指示なしにルート設定の版を上げない。
 
 ## 管理ファイル
 

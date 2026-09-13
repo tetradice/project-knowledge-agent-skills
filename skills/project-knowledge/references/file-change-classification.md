@@ -15,7 +15,7 @@
 | --- | --- | --- |
 | `Knowledge` | `project-knowledge/docs/`内の通常Concept。`index.md`、`log.md`、`type: Reference`は除く | `pk_category`の`declared`、`extracted`、`derived` |
 | `Provenance` | `type: Reference`を持つReference | 文書自身の`pk_source_type`。通常は`user-statement`、`interaction-record`、`reference-document` |
-| `Support` | Knowledge Baseの案内、履歴、収集方針、プロジェクト統合を支えるファイル | `index.md`、`log.md`、`knowledge-policy.md`、AGENTS.mdの管理ブロック、`.gitignore` |
+| `Support` | Knowledge Baseの案内、履歴、収集方針、プロジェクト統合を支えるファイル | `project-knowledge.yaml`、`index.md`、`log.md`、`knowledge-policy.md`、AGENTS.mdの管理ブロック、`.gitignore` |
 | `Internal` | 形式宣言または再構築可能な機械状態 | `manifest.yml`、`state.yml`、`.cache/`内のsnapshot |
 
 Conceptの`sources[].pk_source_type`は根拠の種類であり、Conceptファイル自身の大分類ではない。複数sourceを持つConceptも`Knowledge`の1ファイルとしてだけ数える。`type`は自由な意味分類なので、利用者向け件数の集計軸には使わない。

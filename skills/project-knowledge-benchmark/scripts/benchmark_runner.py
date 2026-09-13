@@ -26,6 +26,10 @@ if str(SCRIPT_ROOT) not in sys.path:
 
 from benchmark_session import record_session as measure_session
 
+# 同梱のproject-knowledgeと設定解決規則を共有
+sys.path.insert(0, str(SCRIPT_ROOT.parent.parent / "project-knowledge" / "scripts"))
+from project_config import CONFIG_NAME, ConfigError, load_config, parse_config, select_layer
+
 SKILL_ROOT = SCRIPT_ROOT.parent
 MODEL_CONFIG = SKILL_ROOT / "agents" / "benchmark.yml"
 CREDIT_CONFIG = SKILL_ROOT / "agents" / "credit-rates.yml"
@@ -63,8 +67,23 @@ def prepare(repository: Path, task_file: Path, baseline: str = "HEAD", output_ro
     if run_git(repository, "status", "--porcelain=v1", "--untracked-files=all").stdout:
         raise BenchmarkError("repository must be clean, including untracked files")
     commit = run_git(repository, "rev-parse", "--verify", f"{baseline}^{{commit}}").stdout.strip()
-    if run_git(repository, "cat-file", "-e", f"{commit}:project-knowledge/manifest.yml", check=False).returncode != 0:
-        raise BenchmarkError("baseline does not contain project-knowledge/manifest.yml")
+    raw_config = run_git(repository, "show", f"{commit}:{CONFIG_NAME}", check=False)
+    if raw_config.returncode != 0:
+        raise BenchmarkError(f"baseline is not registered: {CONFIG_NAME} missing")
+    try:
+        # 過去commitのパスを現在checkoutのsymlinkで解釈しない
+        config = parse_config(raw_config.stdout, repository / CONFIG_NAME, resolve_symlinks=False)
+        layer = select_layer(config)
+    except ConfigError as exc:
+        raise BenchmarkError(str(exc)) from exc
+    knowledge_path = Path(layer["resolved_path"]).relative_to(repository).as_posix()
+    manifest_result = run_git(repository, "show", f"{commit}:{knowledge_path}/manifest.yml", check=False)
+    try:
+        manifest = yaml.safe_load(manifest_result.stdout)
+    except yaml.YAMLError as exc:
+        raise BenchmarkError("baseline manifest is malformed") from exc
+    if manifest_result.returncode != 0 or not isinstance(manifest, dict) or manifest.get("format") != "project-knowledge" or manifest.get("format_version") != "1.0":
+        raise BenchmarkError(f"baseline does not contain a valid {knowledge_path}/manifest.yml")
     if not task_file.is_file():
         raise BenchmarkError(f"task file not found: {task_file}")
 
@@ -85,6 +104,7 @@ def prepare(repository: Path, task_file: Path, baseline: str = "HEAD", output_ro
             opaque_id = f"candidate-{secrets.token_hex(6)}"
             workspace = run_root / "workspaces" / opaque_id
             run_git(repository, "worktree", "add", "--detach", str(workspace), commit)
+            load_config(workspace)
             create_condition_baseline(workspace, condition)
             condition_baseline = isolate_history(workspace, run_root / "control", opaque_id)
             candidates[condition] = {
@@ -95,7 +115,7 @@ def prepare(repository: Path, task_file: Path, baseline: str = "HEAD", output_ro
                 "evaluation": None,
                 "session": None,
             }
-        if content_hash(Path(candidates["no_knowledge"]["workspace"]), exclude_knowledge=True) != content_hash(Path(candidates["with_knowledge"]["workspace"]), exclude_knowledge=True):
+        if content_hash(Path(candidates["no_knowledge"]["workspace"]), exclude_knowledge=True, knowledge_path=knowledge_path) != content_hash(Path(candidates["with_knowledge"]["workspace"]), exclude_knowledge=True, knowledge_path=knowledge_path):
             raise BenchmarkError("candidate sources differ outside project-knowledge")
         descriptor = {
             "schema_version": 1,
@@ -142,7 +162,14 @@ def create_condition_baseline(workspace: Path, condition: str) -> None:
     run_git(workspace, "config", "user.name", "Project Knowledge Benchmark")
     run_git(workspace, "config", "user.email", "benchmark@local.invalid")
     if condition == "no_knowledge":
-        shutil.rmtree(workspace / "project-knowledge")
+        # worktree内の設定を再検査し、確認済みの登録先だけを削除
+        config = load_config(workspace)
+        layer = select_layer(config)
+        target = Path(layer["resolved_path"])
+        if target == workspace.resolve() or not target.is_relative_to(workspace.resolve()):
+            raise BenchmarkError("knowledge directory is outside benchmark workspace")
+        shutil.rmtree(target)
+        (workspace / CONFIG_NAME).unlink()
     run_git(workspace, "add", "-A")
     run_git(workspace, "commit", "--allow-empty", "-m", "Project Knowledge benchmark condition baseline")
 
@@ -164,13 +191,17 @@ def isolate_history(workspace: Path, control_root: Path, opaque_id: str) -> str:
     return run_git(workspace, "rev-parse", "HEAD").stdout.strip()
 
 
-def content_hash(root: Path, exclude_knowledge: bool = False) -> str:
+def content_hash(root: Path, exclude_knowledge: bool = False, knowledge_path: str | None = None) -> str:
     """Git情報と必要に応じKnowledgeを除いたtree hashを返す。"""
 
     digest = hashlib.sha256()
+    if exclude_knowledge and knowledge_path is None and (root / CONFIG_NAME).is_file():
+        config = load_config(root)
+        knowledge_path = Path(select_layer(config)["resolved_path"]).relative_to(root.resolve()).as_posix()
+    excluded = Path(knowledge_path or "project-knowledge")
     for path in sorted(item for item in root.rglob("*") if item.is_file()):
         relative = path.relative_to(root)
-        if relative.parts[0] == ".git" or (exclude_knowledge and relative.parts[0] == "project-knowledge"):
+        if relative.parts[0] == ".git" or (exclude_knowledge and (relative.is_relative_to(excluded) or relative.as_posix() == CONFIG_NAME)):
             continue
         digest.update(relative.as_posix().encode())
         digest.update(path.read_bytes())

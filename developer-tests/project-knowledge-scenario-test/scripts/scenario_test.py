@@ -70,7 +70,7 @@ DIMENSIONS = (
     "noise_rejection",
     "unsupported_claims",
 )
-MANAGED_SOURCE_NAMES = {".git", ".gitignore", "AGENTS.md", "project-knowledge", "__pycache__"}
+MANAGED_SOURCE_NAMES = {".git", ".gitignore", "AGENTS.md", "project-knowledge", "project-knowledge.yaml", "__pycache__"}
 
 
 class ScenarioError(RuntimeError):
@@ -417,6 +417,7 @@ def install_utility_knowledge(descriptor_path: Path) -> dict[str, Any]:
     if target.exists():
         raise ScenarioError("with-kb workspace already contains project-knowledge")
     shutil.copytree(knowledge, target)
+    shutil.copyfile(builder / "project-knowledge.yaml", with_kb / "project-knowledge.yaml")
 
     # No-KB側を含む三workspaceの一次情報が同一であることを固定
     source_hashes = {
@@ -429,6 +430,7 @@ def install_utility_knowledge(descriptor_path: Path) -> dict[str, Any]:
         "status": "ready",
         "source_hashes": source_hashes,
         "knowledge_hash": tree_hash(knowledge),
+        "config_hash": hashlib.sha256((builder / "project-knowledge.yaml").read_bytes()).hexdigest(),
         "builder_deterministic": builder_result,
     }
     write_json(descriptor_path, descriptor)
@@ -463,10 +465,13 @@ def evaluate_utility_condition(descriptor_path: Path, condition: str) -> dict[st
     changed = git_changed_paths(workspace)
     forbidden = [path for path in changed if not path.startswith(("src/", "tests/"))]
     if condition == "with_kb":
-        forbidden = [path for path in forbidden if not path.startswith("project-knowledge/")]
+        forbidden = [path for path in forbidden if path != "project-knowledge.yaml" and not path.startswith("project-knowledge/")]
         knowledge_hash = descriptor.get("knowledge", {}).get("knowledge_hash")
         if knowledge_hash != tree_hash(workspace / "project-knowledge"):
             forbidden.append("project-knowledge/ (modified)")
+        config = workspace / "project-knowledge.yaml"
+        if not config.is_file() or descriptor.get("knowledge", {}).get("config_hash") != hashlib.sha256(config.read_bytes()).hexdigest():
+            forbidden.append("project-knowledge.yaml (modified)")
     existing_total = parse_unittest_count(existing["output"])
     result = {
         "condition": condition,
@@ -992,7 +997,7 @@ def checkpoint_large_actor(workspace: Path, step_id: str) -> None:
     changed = git_changed_paths(workspace)
     allowed = [
         path for path in changed
-        if path in {"AGENTS.md", ".gitignore"} or path.startswith("project-knowledge/")
+        if path in {"AGENTS.md", ".gitignore", "project-knowledge.yaml"} or path.startswith("project-knowledge/")
     ]
     unexpected = sorted(set(changed) - set(allowed))
     if unexpected:
@@ -1001,7 +1006,7 @@ def checkpoint_large_actor(workspace: Path, step_id: str) -> None:
         )
     if allowed:
         commands = (
-            ("git", "add", "--", "AGENTS.md", ".gitignore", "project-knowledge"),
+            ("git", "add", "--", "AGENTS.md", ".gitignore", "project-knowledge", "project-knowledge.yaml"),
             ("git", "commit", "--quiet", "-m", f"Checkpoint knowledge {step_id}"),
         )
         for command in commands:
@@ -1092,7 +1097,7 @@ def run_validator(knowledge_root: Path) -> tuple[list[dict[str, str]], str | Non
     """既存validatorをJSONモードで実行する。"""
 
     result = subprocess.run(
-        [sys.executable, str(VALIDATOR), str(knowledge_root), "--json"],
+        [sys.executable, str(VALIDATOR), str(knowledge_root), "--project-root", str(knowledge_root.parent), "--json"],
         capture_output=True,
         text=True,
         check=False,

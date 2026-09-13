@@ -7,6 +7,16 @@ metadata:
 
 # プロジェクトナレッジ
 
+## 対象プロジェクトの解決
+
+プロジェクトのKnowledgeへアクセスする前に[ルート設定](references/project-config.md)に従って`project_config.py`を実行する。
+`project-knowledge.yaml`がなければ対象外とし、固定ディレクトリから推測しない。一般的な利用案内は設定なしでも説明できる。
+明示的な新規`init`だけは例外であり、[初期化](references/init.md)に従って内容を準備してから登録する。
+以後の`project-knowledge/`表記は解決済みのレイヤーパスを意味する。
+`description`を用途と適用範囲の判断に使い、書き込み前には`--write`で対象を確認する。読み取り専用レイヤーへstateや成果物も保存しない。
+設定の`version: "1.0"`は必須で、ユーザーの指示なしに版を上げない。複数レイヤーの同時利用は未対応とする。
+
+
 プロジェクト固有の知識を`project-knowledge/`で構築・更新・検証・修正・設定し、正しい状態に保つ。利用案内、Knowledge Baseの説明、Knowledgeを根拠とする質問回答、成果物生成、構造監査・構造改善は扱わない。
 
 ## 操作を選ぶ

@@ -7,6 +7,16 @@ metadata:
 
 # Project Knowledge Benchmark
 
+## 対象プロジェクトの解決
+
+このSkillは共通の設定解決に`project-knowledge` Skillを必要とする。
+プロジェクトのKnowledgeへアクセスする前に[ルート設定](../project-knowledge/references/project-config.md)に従って`project_config.py`を実行する。
+`project-knowledge.yaml`がなければ対象外とし、固定ディレクトリから推測しない。一般的な利用案内は設定なしでも説明できる。
+以後の`project-knowledge/`表記は解決済みのレイヤーパスを意味する。
+`description`を用途と適用範囲の判断に使い、書き込み前には`--write`で対象を確認する。読み取り専用レイヤーへstateや成果物も保存しない。
+設定の`version: "1.0"`は必須で、ユーザーの指示なしに版を上げない。複数レイヤーの同時利用は未対応とする。
+
+
 現在存在するProject KnowledgeがSoftware Engineering Taskへ与える効果をsingle-runで比較する。通常のProject Knowledge保守やScenario Testから自動実行しない。
 
 ## 実行前に読む

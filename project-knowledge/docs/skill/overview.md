@@ -37,6 +37,8 @@ sources:
   pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge/references/update.md
   pk_source_type: change-implementation
+- resource: ../../../skills/project-knowledge/references/project-config.md
+  pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge/references/standard-knowledge-policy.md
   pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge/references/fix.md
@@ -84,7 +86,9 @@ sources:
 
 ## 対応形式
 
-全SkillはProject Knowledge形式1.0だけを扱う。manifestがない、壊れている、形式名または版が異なる場合は推測せず停止する。`init`は新規Bundleまたは形式1.0の既存Bundleだけを対象とする。
+Project Knowledgeへアクセスする前に、プロジェクトルートの`project-knowledge.yaml`を解決する。設定がなければ対象外であり、固定の`project-knowledge/`配置やmanifestから推測しない。解決結果のプロジェクトルートとレイヤーのパスを以後の基準とし、書き込みには書き込み可能な対象レイヤーを明示して確認する。
+
+全SkillはProject Knowledge形式1.0だけを扱う。解決済みレイヤーのmanifestがない、壊れている、形式名または版が異なる場合は推測せず停止する。`init`は未登録プロジェクトへの設定作成、または形式1.0の既存Bundleの登録だけを扱う。
 
 ## KnowledgeとIndex
 

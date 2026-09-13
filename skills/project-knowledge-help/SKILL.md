@@ -7,6 +7,16 @@ metadata:
 
 # Project Knowledge Help
 
+## 対象プロジェクトの解決
+
+このSkillは共通の設定解決に`project-knowledge` Skillを必要とする。
+プロジェクトのKnowledgeへアクセスする前に[ルート設定](../project-knowledge/references/project-config.md)に従って`project_config.py`を実行する。
+`project-knowledge.yaml`がなければ対象外とし、固定ディレクトリから推測しない。一般的な利用案内は設定なしでも説明できる。
+以後の`project-knowledge/`表記は解決済みのレイヤーパスを意味する。
+`description`を用途と適用範囲の判断に使い、書き込み前には`--write`で対象を確認する。読み取り専用レイヤーへstateや成果物も保存しない。
+設定の`version: "1.0"`は必須で、ユーザーの指示なしに版を上げない。複数レイヤーの同時利用は未対応とする。
+
+
 Project Knowledgeの基本操作と利用者向け専用Skillを、決められた形式で案内するread-only Skillである。明示的に`$project-knowledge-help`を使用された場合だけ実行する。
 
 説明対象の操作やSkillを起動せず、ファイルを作成、更新、削除しない。通常のプロジェクト質問、Knowledge内容への質問、操作の実行には使用しない。

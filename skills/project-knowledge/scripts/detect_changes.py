@@ -16,13 +16,15 @@ import sys
 from pathlib import Path
 
 from state import atomic_write_text, load_state, write_state
+from project_config import CONFIG_NAME, ConfigError, load_config, select_layer
 
-IGNORED_PARTS = {".git", ".cache", "published", "project-knowledge"}
+IGNORED_PARTS = {".git", ".cache", "published"}
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("project_root", type=Path)
+    parser.add_argument("--layer")
     parser.add_argument(
         "--write-snapshot",
         action="store_true",
@@ -37,7 +39,14 @@ def main() -> int:
 
     # Gitが利用できればcommitと未コミット差分を統合
     root = args.project_root.resolve()
-    state_path = root / "project-knowledge" / "state.yml"
+    try:
+        config = load_config(root)
+        layer = select_layer(config, args.layer, write=args.write_snapshot or args.write_baseline)
+        knowledge_root = Path(layer["resolved_path"])
+    except ConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    state_path = knowledge_root / "state.yml"
     if is_git_repository(root):
         state = load_state(state_path)
         configured_baseline = state.get("git_baseline_commit") if state else None
@@ -64,8 +73,8 @@ def main() -> int:
         return 0
 
     # Gitがなければ内容hashのsnapshotと比較
-    snapshot_path = root / "project-knowledge" / ".cache" / "source-snapshot.json"
-    current = build_snapshot(root, snapshot_path)
+    snapshot_path = knowledge_root / ".cache" / "source-snapshot.json"
+    current = build_snapshot(root, snapshot_path, knowledge_root)
     previous = load_snapshot(snapshot_path)
     changed = sorted(path for path, digest in current.items() if previous.get(path) != digest)
     removed = sorted(path for path in previous if path not in current)
@@ -148,12 +157,14 @@ def git_changes(root: Path, baseline: str | None) -> list[str]:
     return sorted(paths)
 
 
-def build_snapshot(root: Path, snapshot_path: Path | None = None) -> dict[str, str]:
+def build_snapshot(root: Path, snapshot_path: Path | None = None, knowledge_root: Path | None = None) -> dict[str, str]:
     """非Git差分検出用の現在snapshotを作る。"""
 
     snapshot = {}
     for path in sorted(item for item in root.rglob("*") if item.is_file()):
         relative = path.relative_to(root)
+        if relative.as_posix() == CONFIG_NAME or (knowledge_root is not None and path.resolve().is_relative_to(knowledge_root)):
+            continue
         if any(part in IGNORED_PARTS for part in relative.parts):
             continue
         if snapshot_path is not None and path.resolve() == snapshot_path.resolve():
