@@ -1,5 +1,6 @@
 # Interaction Records
 
+- [通常利用Skillのリリース準備レビュー](2026-09-14-release-readiness-review.md): 対象・除外、重大問題なしの実施証跡、READMEのuv/Python前提、audit/refactor UI境界、Ruff整形事項を確認するときに読む。
 - [Project Knowledgeルート設定の実装記録](2026-09-13-root-configuration-implementation.md): 設定解決、初期化、関連Skill、検証と未対応の複数レイヤー境界を確認するときに読む。
 - [ファイル変更報告の表示名を日本語化した実装](2026-09-03-file-change-reporting-labels-implementation.md): 日本語表示名、`derived`の指定、契約テストとSkill validatorの結果を確認するときに読む。
 - [init / updateのファイル変更報告の実装](2026-09-02-file-change-reporting-implementation.md): 分類設計、実装、テスト結果、既存失敗との境界を確認するときに読む。
