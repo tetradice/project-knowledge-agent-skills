@@ -2,6 +2,10 @@
 
 ## 2026-09-14
 
+### `access`省略時の既定値を更新
+
+- レイヤーの`access`を省略した場合の既定値を`read-write`へ変更した。初期生成設定は最小構成のままとし、読み取り専用で運用するときだけ`access: read-only`を明示する。
+
 ### 通常利用Skillのリリース準備レビューを記録
 
 - テスト・ベンチマーク系を除外した通常利用6 Skillのレビュー結果をInteraction Recordへ記録した。通常操作の実行不能や重大矛盾は検出していない一方、READMEのuv/Python 3.11前提、audit/refactorのUI上の明示性、Ruff import-orderをリリース前の対応事項として残した。
