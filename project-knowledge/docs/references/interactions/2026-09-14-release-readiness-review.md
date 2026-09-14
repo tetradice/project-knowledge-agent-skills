@@ -19,3 +19,11 @@ generated:
 もう一つのMediumは、`project-knowledge-audit`がread-onlyの`audit`と書き込みを伴う`refactor`を明確に分け、自動昇格を禁じているのに、UI entryの`agents/openai.yaml`が短い説明とdefault promptで両方を同列に示し、`refactor`の明示要求を含まない点である。UIのdefault promptを使うと書き込み操作の明示性が弱まる。default promptをaudit専用にするか、auditとrefactorを選択させるべきである。
 
 Lowとして、対象runtime scriptへの`uvx ruff check`はI001 import-orderを3件検出した。該当箇所は`skills/project-knowledge/scripts/detect_changes.py:9`、`skills/project-knowledge/scripts/init_project.py:9`、`skills/project-knowledge-publish/scripts/build_offline_docs.py:10`である。機能不全ではなく自動修正可能な整形だが、ruffをリリース品質ゲートに置くなら未達である。
+
+## Medium指摘の対応結果
+
+利用者は、上記のMedium 2件への対応を指示した。`README.md`には、`npx skills add`以外の通常利用でPython 3.11以上と`uv`が必要であり、Node.jsは`npx skills add`によるインストール操作にだけ必要であることを追記した。これにより、通常操作の`uv run`実行例と導入前提が一致した。
+
+`skills/project-knowledge-audit/agents/openai.yaml`は、短い説明をread-only監査に限定し、default promptもread-onlyの`audit`だけを依頼し、refactorやファイル変更を禁止する内容へ変更した。UI entryから`refactor`を暗黙に選ばせないため、書き込みを伴う構造改善は引き続き明示指示が必要である。
+
+今回の対応ではテスト系・ベンチマーク系Skillと、それらの実行を対象外のままとした。LowのRuff import-order 3件も、このMedium対応の対象外であり未変更である。

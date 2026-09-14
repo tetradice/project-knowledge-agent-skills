@@ -6,6 +6,11 @@
 
 - テスト・ベンチマーク系を除外した通常利用6 Skillのレビュー結果をInteraction Recordへ記録した。通常操作の実行不能や重大矛盾は検出していない一方、READMEのuv/Python 3.11前提、audit/refactorのUI上の明示性、Ruff import-orderをリリース前の対応事項として残した。
 
+### リリース準備レビューのMedium指摘を解消
+
+- READMEに通常利用のPython 3.11以上とuvの前提、およびNode.jsは`npx skills add`によるインストール専用である境界を追記した。
+- audit UIの短い説明とdefault promptをread-only監査へ限定し、refactorとファイル変更を明示的に禁止した。テスト・ベンチマーク系Skillは今回も対象外とし、Ruff import-orderのLow指摘は未対応として残した。
+
 ## 2026-09-13
 
 ### 独立した版契約とリリース境界を記録
