@@ -18,6 +18,8 @@ AIエージェントが、プロジェクト固有の仕様・設計判断・実
 npx skills add https://github.com/tetradice/project-knowledge-agent-skills
 ```
 
+`npx skills add`以外の通常利用には、Python 3.11以上と[uv](https://docs.astral.sh/uv/)が必要です。各Skillが案内する`uv run`コマンドは、同梱スクリプトの依存関係を自動的に用意して実行します。Node.jsは上記のインストール操作にだけ必要です。
+
 ## Skill
 
 | Skill | 版 | 用途 |
