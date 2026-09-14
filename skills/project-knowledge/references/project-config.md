@@ -37,7 +37,7 @@ layers:
 | `layers[].id` | 必須。`[a-z][a-z0-9_-]*` |
 | `layers[].path` | 必須。設定所在地からのプロジェクト内相対パス。管理ディレクトリを指す |
 | `layers[].description` | `default`以外は空白だけでない文字列を必須とする。`default`は省略可。複数行可。nullは禁止 |
-| `layers[].access` | `read-only`または`read-write`。省略時は`read-only` |
+| `layers[].access` | `read-only`または`read-write`。省略時は`read-write` |
 | `layers[].optional` | boolean。省略時は`false`。ディレクトリの欠落だけを許容する |
 | `write_target` | 登録された書き込み可能なIDかnull。省略時は1件の`read-write`レイヤーのID、それ以外はnull |
 
@@ -57,7 +57,7 @@ nullの書き込み先は、明示した書き込み可能レイヤーの使用�
 新規initだけは未登録プロジェクトへ初期内容を生成してよい。
 通常の新規initでは`init_project.py <project-root> --prepare`で骨組みを準備し、本文を生成した後、`init_project.py <project-root>`で設定登録を完了する。
 空での初期化は`--prepare`を使わず1回で完了できる。
-登録完了後は生成設定の読み取り専用指定を守り、更新を有効にする明示依頼があれば`access: read-write`を追加する。
+登録完了後は生成設定の書き込み可能指定を守る。読み取り専用で運用したい場合は、明示的に`access: read-only`を指定する。
 既存の読み取り専用レイヤーへのinit再実行は、初期化済みなら変更なしで終了し、修復が必要なら停止する。
 
 Policyの運用設定は各レイヤーの`knowledge-policy.md`に残す。

@@ -5,11 +5,13 @@ pk_derivation: synthesized
 status: stable
 generated:
   by: project-knowledge/3.1.0
-  at: 2026-08-29T10:46:55+09:00
+  at: 2026-09-14T00:00:00+09:00
 sources:
 - resource: ../references/user-statements/2026-08-26-current-format-only.md
   pk_source_type: user-statement
 - resource: ../references/user-statements/2026-08-29-standard-policy-reference.md
+  pk_source_type: user-statement
+- resource: ../references/user-statements/2026-09-14-default-read-write.md
   pk_source_type: user-statement
 - resource: ../../../skills/project-knowledge/references/data-formats/1.0.md
   pk_source_type: change-implementation
@@ -30,7 +32,7 @@ sources:
 
 `project-knowledge.yaml`はプロジェクトから利用するKnowledge bundleを登録する入口であり、bundle内の`manifest.yml`とは責務が異なる。ルート設定は配置とアクセスを解決し、`manifest.yml`はbundleの形式を宣言する。
 
-ルート設定の`version`は文字列`"1.0"`、`layers`、各レイヤーの`id`と`path`を必須とする。初期実装は0〜1レイヤーだけを受け付け、2件以上は拒否する。`id: default`以外では非空の`description`を必須にし、`access`を省略した場合は`read-only`とする。ユーザーの指示なしにルート設定の版を上げない。
+ルート設定の`version`は文字列`"1.0"`、`layers`、各レイヤーの`id`と`path`を必須とする。初期実装は0〜1レイヤーだけを受け付け、2件以上は拒否する。`id: default`以外では非空の`description`を必須にし、`access`を省略した場合は`read-write`とする。ユーザーの指示なしにルート設定の版を上げない。
 
 ## 管理ファイル
 

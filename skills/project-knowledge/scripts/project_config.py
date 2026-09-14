@@ -104,7 +104,7 @@ def parse_config(text: str, config_path: Path, *, resolve_symlinks: bool = True)
         resolved = (root / path).resolve() if resolve_symlinks else Path(os.path.abspath(root / path))
         if resolved == root or not resolved.is_relative_to(root):
             fail(key + ".path", "must be a directory strictly inside the project")
-        access = item.get("access", "read-only")
+        access = item.get("access", "read-write")
         if access not in ("read-only", "read-write"):
             fail(key + ".access", "must be read-only or read-write")
         optional = item.get("optional", False)
