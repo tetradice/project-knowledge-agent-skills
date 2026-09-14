@@ -28,15 +28,15 @@ def snapshot(root: Path) -> dict:
     return {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
 
 
-def test_generated_config_is_minimal_and_read_only(tmp_path: Path) -> None:
+def test_generated_config_is_minimal_and_read_write(tmp_path: Path) -> None:
     result = run("init_project.py", tmp_path)
     assert result.returncode == 0, result.stderr
     text = (tmp_path / "project-knowledge.yaml").read_text(encoding="utf-8")
     assert text.splitlines()[0] == "# この設定ファイルは project-knowledge skill で生成されました。"
     assert yaml.safe_load(text) == {"version": "1.0", "layers": [{"id": "default", "path": "./project-knowledge"}]}
     config = load_config(tmp_path)
-    assert config["write_target"] is None
-    assert config["layers"][0]["access"] == "read-only"
+    assert config["write_target"] == "default"
+    assert config["layers"][0]["access"] == "read-write"
     before = snapshot(tmp_path)
     assert run("init_project.py", tmp_path).returncode == 0
     assert snapshot(tmp_path) == before
@@ -88,7 +88,7 @@ def test_description_multiline_and_optional_defaults(tmp_path: Path) -> None:
     text = 'version: "1.0"\nlayers:\n  - id: team\n    path: ./kb\n    description: |\n      Team design.\n      Shared decisions.\n'
     config = parse_config(text, tmp_path / "project-knowledge.yaml")
     assert config["layers"][0]["description"] == "Team design.\nShared decisions.\n"
-    assert config["write_target"] is None
+    assert config["write_target"] == "team"
     assert not config["layers"][0]["optional"]
 
 
@@ -140,6 +140,8 @@ def test_custom_path_writes_and_null_target(tmp_path: Path) -> None:
 def test_unregistered_and_read_only_operations_do_not_write(tmp_path: Path) -> None:
     assert run("init_project.py", tmp_path).returncode == 0
     root = tmp_path / "project-knowledge"
+    config_path = tmp_path / "project-knowledge.yaml"
+    config_path.write_text(config_text(access="read-only"), encoding="utf-8")
     before = snapshot(tmp_path)
     assert run("detect_changes.py", tmp_path).returncode == 0
     assert run("detect_changes.py", tmp_path, "--write-snapshot").returncode == 2
@@ -204,7 +206,7 @@ def test_layer_validation(tmp_path: Path, key: str, value: object) -> None:
         parse_config(yaml.safe_dump(data), tmp_path / "project-knowledge.yaml")
 
 
-@pytest.mark.parametrize("target", ["default", "missing", 1, []])
+@pytest.mark.parametrize("target", ["missing", 1, []])
 def test_invalid_write_target(tmp_path: Path, target: object) -> None:
     data = yaml.safe_load(config_text())
     data["write_target"] = target
