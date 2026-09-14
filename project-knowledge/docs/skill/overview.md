@@ -5,7 +5,7 @@ pk_derivation: synthesized
 status: stable
 generated:
   by: project-knowledge/3.1.0
-  at: 2026-09-01T16:28:16+09:00
+  at: 2026-09-14T20:41:27+09:00
 sources:
 - resource: ../references/user-statements/2026-08-31-user-statement-reflection.md
   pk_source_type: user-statement
@@ -30,6 +30,8 @@ sources:
 - resource: ../references/user-statements/2026-08-26-current-format-only.md
   pk_source_type: user-statement
 - resource: ../references/user-statements/2026-08-26-index-content-boundary.md
+  pk_source_type: user-statement
+- resource: ../references/user-statements/2026-09-14-multi-layer-display-names.md
   pk_source_type: user-statement
 - resource: ../../../skills/project-knowledge/SKILL.md
   pk_source_type: change-implementation
@@ -61,6 +63,8 @@ sources:
   pk_source_type: interaction-record
 - resource: ../references/interactions/2026-08-29-help-skill-split-implementation.md
   pk_source_type: interaction-record
+- resource: ../references/interactions/2026-09-14-multi-layer-implementation.md
+  pk_source_type: interaction-record
 ---
 # プロジェクトナレッジ Skill
 
@@ -86,7 +90,7 @@ sources:
 
 ## 対応形式
 
-Project Knowledgeへアクセスする前に、プロジェクトルートの`project-knowledge.yaml`を解決する。設定がなければ対象外であり、固定の`project-knowledge/`配置やmanifestから推測しない。解決結果のプロジェクトルートとレイヤーのパスを以後の基準とし、書き込みには書き込み可能な対象レイヤーを明示して確認する。
+Project Knowledgeへアクセスする前に、プロジェクトルートの`project-knowledge.yaml`を解決する。設定がなければ対象外であり、固定の`project-knowledge/`配置やmanifestから推測しない。解決結果のプロジェクトルートと全レイヤーのパスを以後の基準とする。参照操作は全レイヤーを対象にしてレイヤーIDを結果へ付け、書込みは明示指定、明確な`name`または`id`指定、Policyに適合する一意なAI候補、`write_target`の順で書込み可能な1レイヤーを選ぶ。
 
 全SkillはProject Knowledge形式1.0だけを扱う。解決済みレイヤーのmanifestがない、壊れている、形式名または版が異なる場合は推測せず停止する。`init`は未登録プロジェクトへの設定作成、または形式1.0の既存Bundleの登録だけを扱う。
 

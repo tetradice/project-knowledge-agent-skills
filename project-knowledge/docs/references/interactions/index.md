@@ -1,5 +1,6 @@
 # Interaction Records
 
+- [複数レイヤーと必須表示名の実装記録](2026-09-14-multi-layer-implementation.md): 仕様検討、実装した設定・Skill契約、軽量に留めたテストとBenchmarkの検証境界を確認するときに読む。
 - [通常利用Skillのリリース準備レビュー](2026-09-14-release-readiness-review.md): 対象・除外、重大問題なしの実施証跡、解消済みのREADMEのuv/Python前提とaudit/refactor UI境界、未対応のRuff整形事項を確認するときに読む。
 - [Project Knowledgeルート設定の実装記録](2026-09-13-root-configuration-implementation.md): 設定解決、初期化、関連Skill、検証と未対応の複数レイヤー境界を確認するときに読む。
 - [ファイル変更報告の表示名を日本語化した実装](2026-09-03-file-change-reporting-labels-implementation.md): 日本語表示名、`derived`の指定、契約テストとSkill validatorの結果を確認するときに読む。
