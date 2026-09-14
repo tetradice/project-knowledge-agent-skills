@@ -16,7 +16,8 @@ JSON結果の`project_root`と各レイヤーの`resolved_path`を以後の基�
 手順や実行例中の`project-knowledge/`は既定配置の例であり、実際には解決済みのレイヤーパスへ置き換える。
 書き込み前には`--write`を付け、対象を明示する場合は`--layer <id>`も指定する。
 結果の`description`を、関連性、適用範囲、記録先候補の判断に使う。
-説明はPolicyやアクセス指定を上書きせず、説明がない`default`レイヤーも対象に含める。
+`name`はAIと利用者が使う必須の呼称であり、自然言語での明確な対象指定にも使う。`id`はCLI、根拠、stateで使う不変の機械識別子である。
+説明はPolicyやアクセス指定を上書きしない。
 
 ## 設定仕様
 
@@ -27,18 +28,21 @@ JSON結果の`project_root`と各レイヤーの`resolved_path`を以後の基�
 version: "1.0"
 layers:
   - id: default
+    name: 既定
     path: ./project-knowledge
 ```
 
 | キー | 条件と省略時の動作 |
 | --- | --- |
 | `version` | 必須の文字列`"1.0"`。ユーザーの指示なしに版を上げない |
-| `layers` | 必須の配列。初期実装は0〜1件、2件以上は未対応エラー |
+| `layers` | 必須の配列。0件以上を登録できる |
 | `layers[].id` | 必須。`[a-z][a-z0-9_-]*` |
+| `layers[].name` | 必須。空白以外を含む利用者向け呼称。レイヤー間で一意 |
 | `layers[].path` | 必須。設定所在地からのプロジェクト内相対パス。管理ディレクトリを指す |
 | `layers[].description` | `default`以外は空白だけでない文字列を必須とする。`default`は省略可。複数行可。nullは禁止 |
 | `layers[].access` | `read-only`または`read-write`。省略時は`read-write` |
 | `layers[].optional` | boolean。省略時は`false`。ディレクトリの欠落だけを許容する |
+| `layers[].auto_select` | boolean。省略時は`true`。`false`なら曖昧なAI自動選択の候補から除外 |
 | `write_target` | 登録された書き込み可能なIDかnull。省略時は1件の`read-write`レイヤーのID、それ以外はnull |
 
 空ファイル、未知キー、重複キー、型不一致、未対応版、複数YAML文書、独自タグ、アンカー、エイリアス、merge keyを拒否する。
@@ -51,6 +55,7 @@ layers:
 参照先が存在する場合、manifestの破損やアクセスエラーは無視しない。
 対象がない、書き込み先が未指定、読み取り専用、指定先が欠落している場合は書き込まず、他のレイヤーに切り替えない。
 nullの書き込み先は、明示した書き込み可能レイヤーの使用まで禁止するものではない。
+`write_target`には`auto_select: false`のレイヤーを指定できない。複数レイヤーの参照操作は全件を対象にし、書込み操作は明示指定、明確な`name`または`id`指定、AIの一意な候補判定、`write_target`の順で1件を選ぶ。
 
 ## 操作と設定の境界
 

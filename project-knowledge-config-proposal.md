@@ -1,7 +1,7 @@
 # Project Knowledgeのルート設定ファイル案
 
 2026-09-13時点の検討案。
-この文書の初期段階（0〜1レイヤー）は実装済みであり、複数レイヤーの同時利用は将来仕様として区別する。
+複数レイヤーの同時利用と必須の表示名を含む仕様として更新する。
 運用手順の正本は[ルート設定仕様](skills/project-knowledge/references/project-config.md)を参照する。
 既存のSkill、データ形式、スキーマのバージョンは変更しない。
 
@@ -21,6 +21,7 @@ YAMLを選ぶ理由は、コメントを記述でき、既存のmanifestやPolic
 version: "1.0"
 layers:
   - id: default
+    name: 既定
     path: ./project-knowledge
 ```
 
@@ -39,10 +40,11 @@ layers:
 version: "1.0"
 layers:
   - id: default
+    name: 既定
     path: ./project-knowledge
 ```
 
-初期化では`id: default`を使い、`description`、`access`、`optional`、`write_target`を省略する。
+初期化では`id: default`と`name: 既定`を使い、`description`、`access`、`optional`、`auto_select`、`write_target`を省略する。
 この設定は省略規則により、説明なし、`access: read-only`、`optional: false`、`write_target: null`として扱う。
 初期化後に知識を記録する場合は、`access: read-write`を明示する。
 生成元コメントは生成時の要件であり、手書きの設定ファイルの有効性判定には使わない。
@@ -57,10 +59,12 @@ layers:
 | `version` | 文字列`"1.0"` | 省略不可 | ルート設定ファイルの仕様バージョン |
 | `layers` | オブジェクトの配列 | 省略不可 | 利用対象とするナレッジの一覧 |
 | `layers[].id` | 空でない文字列 | 省略不可 | パス変更後も維持できる識別子 |
+| `layers[].name` | 空白以外を含む文字列 | 省略不可 | AIと利用者が使う一意の呼称 |
 | `layers[].path` | 空でない文字列 | 省略不可 | 設定ファイルからの相対パス |
 | `layers[].description` | 文字列 | `id: default`の場合だけ省略可。それ以外は必須 | LLMがレイヤーの用途や対象範囲を判断するための自然言語の説明 |
 | `layers[].access` | `read-only`または`read-write` | `read-only` | そのレイヤーへの書き込み可否 |
 | `layers[].optional` | boolean | `false` | ディレクトリが存在しない場合に、そのレイヤーを省略できるか |
+| `layers[].auto_select` | boolean | `true` | 曖昧なAI自動選択の候補に含めるか |
 | `write_target` | レイヤーIDまたは`null` | 下記の規則 | 更新先を明示しない操作で使用する既定の書き込み先 |
 
 `version`の初期値は文字列`"1.0"`とし、YAMLでは引用符を付けて記述する。
@@ -139,31 +143,35 @@ LLMはこの説明を、質問に関連するレイヤーの選択、内容の�
 
 ## レイヤード運用
 
-将来の複数配置も、同じ`layers`構造で表現する。
+複数配置も、同じ`layers`構造で表現する。
 次は、3つのナレッジディレクトリを用意した場合の例である。
 
 ```yaml
 version: "1.0"
 layers:
   - id: local
+    name: 個人用
     path: ./.project-knowledge/local
     description: 個人の作業環境や試行結果を記録します。個人環境に関する質問で参照します。
     access: read-write
     optional: true
   - id: team
+    name: チーム用
     path: ./project-knowledge
     description: チームで共有する仕様と設計判断を保存します。プロジェクトの実装や運用を調べるときに参照します。
     access: read-only
   - id: public
+    name: 公開用
     path: ./vendor/public-knowledge
     description: 外部公開された共通知識を参照します。汎用的な概念や公開仕様を調べるときに使用します。
     access: read-only
+    auto_select: false
 write_target: local
 ```
 
 個人用ディレクトリはGitの追跡対象外とし、チーム用と公開用を読みながら個人用に記録できる。
 個人用ディレクトリがない環境では読み取りを継続し、書き込み時には個人用の初期化が必要であることを報告する。
-`local`、`team`、`public`というIDに予約された動作はなく、利用者が用途を表す名前として付けている。
+`local`、`team`、`public`というIDに予約された動作はなく、利用者向けの呼称は必須の`name`で定義する。AIは候補、結果、質問で`name`を使い、根拠やCLIでは`id`を保持する。
 
 配列順は探索と表示の順序にだけ使う。
 同名ファイルを重ねて仮想的に上書きしたり、先頭レイヤーの主張を自動的に正しいと扱ったりしない。
@@ -194,7 +202,7 @@ write_target: local
 持ち運ばれたナレッジでも方針を維持でき、ルート設定との優先順位も不要になる。
 既存Format 1.0で必須のPolicy設定は引き続き必須であり、ルート設定の省略可能性とは独立して扱う。
 
-追加候補として採用するのは、パスのほかに`id`、`description`、`access`、`optional`、`write_target`である。
+採用するのは、パスのほかに`id`、必須の`name`、`description`、`access`、`optional`、`auto_select`、`write_target`である。
 用途がまだ確定していない次の項目は、初期仕様から外す。
 
 | 候補 | 見送る理由と将来の検討条件 |
@@ -210,10 +218,7 @@ write_target: local
 
 ## 段階的な導入と既存プロジェクトの移行
 
-初期実装では設定必須化と1レイヤーの解決を導入し、`layers`は0件または1件だけを受け付ける。
-この段階から表のキーを解釈し、2件以上は「複数レイヤー未対応」と明示的にエラーにする。
-複数レイヤーの検索、根拠の識別、更新先の選択、キャッシュ分離が揃った時点で件数制限を解除する。
-前節の3レイヤー例は、その後の利用例である。
+任意個数のレイヤーを受け付け、検索では全件を識別して扱う。更新先は明示指定、明確な`name`または`id`、一意なAI判定、`write_target`の順に1件を選ぶ。
 
 既存プロジェクトは、従来どおりの配置ならルートに初期化サンプルと同じ`project-knowledge.yaml`を追加するだけで登録できる。
 `version: "1.0"`、`layers`、`id`、`path`を明記し、従来の更新操作を続ける場合は`access: read-write`を指定する。

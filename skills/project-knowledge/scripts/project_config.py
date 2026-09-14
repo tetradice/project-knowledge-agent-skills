@@ -78,9 +78,6 @@ def parse_config(text: str, config_path: Path, *, resolve_symlinks: bool = True)
         fail("version", 'must be the string "1.0"; never upgraded automatically')
     if not isinstance(data.get("layers"), list):
         fail("layers", "required list")
-    if len(data["layers"]) > 1:
-        fail("layers", "multiple layers are not supported yet")
-
     # 実行時に使うレイヤーを正規化し、暗黙のパスは作らない
     root = config_path.parent.resolve()
     layers = []
@@ -88,11 +85,15 @@ def parse_config(text: str, config_path: Path, *, resolve_symlinks: bool = True)
         key = f"layers[{index}]"
         if not isinstance(item, dict):
             fail(key, "must be a mapping")
-        if set(item) - {"id", "path", "description", "access", "optional"}:
-            fail(key, f"unknown layer keys: {set(item) - {'id', 'path', 'description', 'access', 'optional'}}")
+        allowed_keys = {"id", "name", "path", "description", "access", "optional", "auto_select"}
+        if set(item) - allowed_keys:
+            fail(key, f"unknown layer keys: {set(item) - allowed_keys}")
         identifier = item.get("id")
         if not isinstance(identifier, str) or not re.fullmatch(r"[a-z][a-z0-9_-]*", identifier):
             fail(key + ".id", "required identifier matching [a-z][a-z0-9_-]*")
+        name = item.get("name")
+        if not isinstance(name, str) or not name.strip():
+            fail(key + ".name", "required nonblank display name")
         description = item.get("description", "")
         if not isinstance(description, str) or (identifier != "default" and not description.strip()):
             fail(key + ".description", "must be a string; non-default IDs require a nonblank description")
@@ -110,14 +111,33 @@ def parse_config(text: str, config_path: Path, *, resolve_symlinks: bool = True)
         optional = item.get("optional", False)
         if type(optional) is not bool:
             fail(key + ".optional", "must be boolean")
-        layers.append({"id": identifier, "path": path, "resolved_path": str(resolved),
-                       "description": description, "access": access, "optional": optional})
+        auto_select = item.get("auto_select", True)
+        if type(auto_select) is not bool:
+            fail(key + ".auto_select", "must be boolean")
+        layers.append({"id": identifier, "name": name, "path": path, "resolved_path": str(resolved),
+                       "description": description, "access": access, "optional": optional,
+                       "auto_select": auto_select})
+
+    for index, layer in enumerate(layers):
+        other_layers = layers[:index] + layers[index + 1:]
+        if any(other["id"] == layer["id"] for other in other_layers):
+            fail(f"layers[{index}].id", "must be unique")
+        if any(other["name"] == layer["name"] for other in other_layers):
+            fail(f"layers[{index}].name", "must be unique")
+        if any(other["id"] == layer["name"] for other in other_layers):
+            fail(f"layers[{index}].name", "must not match another layer ID")
+        path = Path(layer["resolved_path"])
+        if any(path == Path(other["resolved_path"]) for other in other_layers):
+            fail(f"layers[{index}].path", "must be unique")
+        if any(path.is_relative_to(Path(other["resolved_path"])) or Path(other["resolved_path"]).is_relative_to(path) for other in other_layers):
+            fail(f"layers[{index}].path", "must not contain or be contained by another layer")
 
     target = data.get("write_target", layers[0]["id"] if len(layers) == 1 and layers[0]["access"] == "read-write" else None)
-    if target is not None and (not isinstance(target, str) or not any(
-        layer["id"] == target and layer["access"] == "read-write" for layer in layers
-    )):
+    target_layer = next((layer for layer in layers if layer["id"] == target), None)
+    if target is not None and (not isinstance(target, str) or target_layer is None or target_layer["access"] != "read-write"):
         fail("write_target", "must name a registered read-write layer or be null")
+    if target_layer is not None and not target_layer["auto_select"]:
+        fail("write_target", "must not name an auto_select: false layer")
     return {"version": CONFIG_VERSION, "config_path": str(config_path), "project_root": str(root),
             "layers": layers, "write_target": target}
 
@@ -197,12 +217,19 @@ def registered_path(path: Path, *, policy: bool = False, write: bool = False, la
     if config_path is None:
         raise ConfigError(f"{path}: project is not registered ({CONFIG_NAME} missing)")
     config = load_config(config_path.parent, check_manifest=check_manifest)
-    layer = select_layer(config, layer_id, write=write)
-    root = Path(layer["resolved_path"])
-    expected = root / "knowledge-policy.md" if policy else root
-    if candidate != expected and (policy or candidate != config_path.parent):
+    expected_layers = [
+        layer for layer in config["layers"]
+        if candidate == (Path(layer["resolved_path"]) / "knowledge-policy.md" if policy else Path(layer["resolved_path"]))
+    ]
+    if layer_id is not None:
+        layer = select_layer(config, layer_id, write=write)
+        expected_layers = [layer] if layer in expected_layers else []
+    elif write:
+        layer = select_layer(config, write=True)
+        expected_layers = [layer] if layer in expected_layers else []
+    if len(expected_layers) != 1:
         raise ConfigError(f"{path}: path does not match the registered layer")
-    return expected
+    return candidate
 
 
 def main() -> int:

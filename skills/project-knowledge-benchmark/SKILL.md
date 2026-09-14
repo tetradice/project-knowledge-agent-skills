@@ -14,7 +14,7 @@ metadata:
 `project-knowledge.yaml`がなければ対象外とし、固定ディレクトリから推測しない。一般的な利用案内は設定なしでも説明できる。
 以後の`project-knowledge/`表記は解決済みのレイヤーパスを意味する。
 `description`を用途と適用範囲の判断に使い、書き込み前には`--write`で対象を確認する。読み取り専用レイヤーへstateや成果物も保存しない。
-設定の`version: "1.0"`は必須で、ユーザーの指示なしに版を上げない。複数レイヤーの同時利用は未対応とする。
+設定の`version: "1.0"`は必須で、ユーザーの指示なしに版を上げない。複数レイヤーでは登録済みの全レイヤーをKnowledge対象として扱う。`name`は必須の利用者向け呼称、`id`は不変の機械識別子である。
 
 
 現在存在するProject KnowledgeがSoftware Engineering Taskへ与える効果をsingle-runで比較する。通常のProject Knowledge保守やScenario Testから自動実行しない。

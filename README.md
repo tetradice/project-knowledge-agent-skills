@@ -2,9 +2,9 @@
 
 ## ルート設定（必須）
 
-`project-knowledge.yaml`の存在を利用条件とし、`version: "1.0"`と`layers`、各要素の`id`、`path`を必須とします。
-`description`は`default`以外で必須です。初期化設定は`access`を省略するため読み取り専用となり、初期化後の更新には`access: read-write`が必要です。
-現在は0〜1レイヤーに対応し、複数レイヤーは未対応エラーになります。設定の版はユーザーの指示なしに上げません。
+`project-knowledge.yaml`の存在を利用条件とし、`version: "1.0"`と`layers`、各要素の`id`、`name`、`path`を必須とします。
+`id`は不変の機械識別子、`name`はAIと利用者が使う呼称です。`description`は`default`以外で必須です。初期化設定は`access`を省略するため読み取り専用となり、初期化後の更新には`access: read-write`が必要です。
+複数レイヤーでは参照操作が全レイヤーを対象とし、書込み操作は1レイヤーだけを選びます。`auto_select: false`は曖昧なAI自動選択からレイヤーを除外します。設定の版はユーザーの指示なしに上げません。
 本文中の`project-knowledge/`は既定配置の例です。実際のパス、探索規則、初期化と移行は[ルート設定仕様](skills/project-knowledge/references/project-config.md)に従います。
 
 

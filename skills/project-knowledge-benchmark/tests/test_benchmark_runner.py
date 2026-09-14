@@ -24,7 +24,7 @@ def create_repository(root: Path, with_knowledge: bool = True) -> Path:
     (repository / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
     if with_knowledge:
         (repository / "project-knowledge.yaml").write_text(
-            'version: "1.0"\nlayers:\n  - id: default\n    path: ./project-knowledge\n', encoding="utf-8"
+            'version: "1.0"\nlayers:\n  - id: default\n    name: 既定\n    path: ./project-knowledge\n', encoding="utf-8"
         )
         knowledge = repository / "project-knowledge"
         knowledge.mkdir()
@@ -112,7 +112,7 @@ def test_prepare_uses_config_from_baseline_and_custom_path(tmp_path: Path) -> No
     repository = create_repository(tmp_path)
     git(repository, "mv", "project-knowledge", "custom-knowledge")
     config = repository / "project-knowledge.yaml"
-    config.write_text('version: "1.0"\nlayers:\n  - id: team\n    path: ./custom-knowledge\n    description: Team decisions\n', encoding="utf-8")
+    config.write_text('version: "1.0"\nlayers:\n  - id: team\n    name: チーム用\n    path: ./custom-knowledge\n    description: Team decisions\n', encoding="utf-8")
     git(repository, "add", "-A")
     git(repository, "commit", "-m", "custom configuration")
     baseline = git(repository, "rev-parse", "HEAD").stdout.strip()
@@ -128,6 +128,33 @@ def test_prepare_uses_config_from_baseline_and_custom_path(tmp_path: Path) -> No
         assert (with_kb / "custom-knowledge" / "manifest.yml").is_file()
         assert "./custom-knowledge" in (with_kb / "project-knowledge.yaml").read_text(encoding="utf-8")
         assert (without / "app.py").read_bytes() == (with_kb / "app.py").read_bytes()
+    finally:
+        cleanup(descriptor_path)
+
+
+def test_prepare_removes_all_registered_layers(tmp_path: Path) -> None:
+    """No-KB条件とblind snapshotが全登録レイヤーを除外する。"""
+
+    repository = create_repository(tmp_path)
+    team = repository / "team-knowledge"
+    team.mkdir()
+    (team / "manifest.yml").write_text('format: project-knowledge\nformat_version: "1.0"\n', encoding="utf-8")
+    (team / "guide.md").write_text("Shared VALUE rules.\n", encoding="utf-8")
+    (repository / "project-knowledge.yaml").write_text(
+        'version: "1.0"\nlayers:\n  - id: personal\n    name: Personal\n    path: ./project-knowledge\n    description: private\n  - id: team\n    name: Team\n    path: ./team-knowledge\n    description: shared\n',
+        encoding="utf-8",
+    )
+    git(repository, "add", "-A")
+    git(repository, "commit", "-m", "add team knowledge")
+    descriptor_path = RUNNER["prepare"](repository, create_task(tmp_path), output_root=tmp_path / "runs")
+    try:
+        descriptor = RUNNER["read_json"](descriptor_path)
+        no_kb = Path(descriptor["candidates"]["no_knowledge"]["workspace"])
+        assert not (no_kb / "project-knowledge").exists()
+        assert not (no_kb / "team-knowledge").exists()
+        paths = RUNNER["blind"](descriptor_path)
+        assert all(not (Path(path) / "project-knowledge").exists() for path in paths.values())
+        assert all(not (Path(path) / "team-knowledge").exists() for path in paths.values())
     finally:
         cleanup(descriptor_path)
 

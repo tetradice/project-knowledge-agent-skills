@@ -18,7 +18,7 @@ def run(name: str, *args: object) -> subprocess.CompletedProcess:
 
 
 def config_text(path: str = "./project-knowledge", access: str | None = None) -> str:
-    data = {"version": "1.0", "layers": [{"id": "default", "path": path}]}
+    data = {"version": "1.0", "layers": [{"id": "default", "name": "既定", "path": path}]}
     if access:
         data["layers"][0]["access"] = access
     return yaml.safe_dump(data, sort_keys=False)
@@ -33,7 +33,7 @@ def test_generated_config_is_minimal_and_read_write(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     text = (tmp_path / "project-knowledge.yaml").read_text(encoding="utf-8")
     assert text.splitlines()[0] == "# この設定ファイルは project-knowledge skill で生成されました。"
-    assert yaml.safe_load(text) == {"version": "1.0", "layers": [{"id": "default", "path": "./project-knowledge"}]}
+    assert yaml.safe_load(text) == {"version": "1.0", "layers": [{"id": "default", "name": "既定", "path": "./project-knowledge"}]}
     config = load_config(tmp_path)
     assert config["write_target"] == "default"
     assert config["layers"][0]["access"] == "read-write"
@@ -85,11 +85,12 @@ def test_nondefault_description_is_required(tmp_path: Path, description: object)
 
 
 def test_description_multiline_and_optional_defaults(tmp_path: Path) -> None:
-    text = 'version: "1.0"\nlayers:\n  - id: team\n    path: ./kb\n    description: |\n      Team design.\n      Shared decisions.\n'
+    text = 'version: "1.0"\nlayers:\n  - id: team\n    name: チーム用\n    path: ./kb\n    description: |\n      Team design.\n      Shared decisions.\n'
     config = parse_config(text, tmp_path / "project-knowledge.yaml")
     assert config["layers"][0]["description"] == "Team design.\nShared decisions.\n"
     assert config["write_target"] == "team"
     assert not config["layers"][0]["optional"]
+    assert config["layers"][0]["auto_select"]
 
 
 @pytest.mark.parametrize("path", ["../outside", ".", "/tmp/kb", "C:/kb", "C:kb", "~/kb", "${ROOT}/kb", "./*/kb", "https://host/kb"])
@@ -103,8 +104,30 @@ def test_zero_and_multiple_layers(tmp_path: Path) -> None:
     assert config["layers"] == []
     with pytest.raises(ConfigError):
         select_layer(config)
-    with pytest.raises(ConfigError, match="multiple layers"):
-        parse_config('version: "1.0"\nlayers: [{id: default, path: ./a}, {id: default, path: ./b}]', tmp_path / "project-knowledge.yaml")
+    config = parse_config('version: "1.0"\nlayers: [{id: personal, name: 個人用, path: ./a, description: private}, {id: team, name: チーム用, path: ./b, description: shared}, {id: public, name: 公開用, path: ./c, description: public, auto_select: false}]', tmp_path / "project-knowledge.yaml")
+    assert [layer["id"] for layer in config["layers"]] == ["personal", "team", "public"]
+    assert config["write_target"] is None
+
+
+@pytest.mark.parametrize("key,value", [("name", None), ("name", " "), ("name", 1), ("auto_select", "false")])
+def test_name_and_auto_select_validation(tmp_path: Path, key: str, value: object) -> None:
+    data = yaml.safe_load(config_text())
+    data["layers"][0][key] = value
+    with pytest.raises(ConfigError):
+        parse_config(yaml.safe_dump(data), tmp_path / "project-knowledge.yaml")
+
+
+@pytest.mark.parametrize("second", [
+    {"id": "team", "name": "既定", "path": "./team", "description": "shared"},
+    {"id": "team", "name": "default", "path": "./team", "description": "shared"},
+    {"id": "team", "name": "チーム用", "path": "./project-knowledge/child", "description": "shared"},
+    {"id": "team", "name": "チーム用", "path": "./project-knowledge", "description": "shared"},
+])
+def test_multiple_layer_collisions_are_rejected(tmp_path: Path, second: dict[str, object]) -> None:
+    data = yaml.safe_load(config_text())
+    data["layers"].append(second)
+    with pytest.raises(ConfigError):
+        parse_config(yaml.safe_dump(data), tmp_path / "project-knowledge.yaml")
 
 
 def test_optional_missing_does_not_hide_broken_manifest(tmp_path: Path) -> None:
@@ -211,6 +234,14 @@ def test_invalid_write_target(tmp_path: Path, target: object) -> None:
     data = yaml.safe_load(config_text())
     data["write_target"] = target
     with pytest.raises(ConfigError, match="write_target"):
+        parse_config(yaml.safe_dump(data), tmp_path / "project-knowledge.yaml")
+
+
+def test_auto_select_false_cannot_be_write_target(tmp_path: Path) -> None:
+    data = yaml.safe_load(config_text())
+    data["layers"][0]["auto_select"] = False
+    data["write_target"] = "default"
+    with pytest.raises(ConfigError, match="auto_select"):
         parse_config(yaml.safe_dump(data), tmp_path / "project-knowledge.yaml")
 
 
