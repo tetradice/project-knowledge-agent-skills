@@ -28,7 +28,7 @@ JSON結果の`project_root`と各レイヤーの`resolved_path`を以後の基�
 version: "1.0"
 layers:
   - id: default
-    name: 既定
+    name: プロジェクトナレッジ
     path: ./project-knowledge
 ```
 
@@ -37,7 +37,7 @@ layers:
 | `version` | 必須の文字列`"1.0"`。ユーザーの指示なしに版を上げない |
 | `layers` | 必須の配列。0件以上を登録できる |
 | `layers[].id` | 必須。`[a-z][a-z0-9_-]*` |
-| `layers[].name` | 必須。空白以外を含む利用者向け呼称。レイヤー間で一意 |
+| `layers[].name` | 必須。空白以外を含む利用者向け呼称。レイヤー間で一意。初期化時の`id: default`は`プロジェクトナレッジ` |
 | `layers[].path` | 必須。設定所在地からのプロジェクト内相対パス。管理ディレクトリを指す |
 | `layers[].description` | `default`以外は空白だけでない文字列を必須とする。`default`は省略可。複数行可。nullは禁止 |
 | `layers[].access` | `read-only`または`read-write`。省略時は`read-write` |

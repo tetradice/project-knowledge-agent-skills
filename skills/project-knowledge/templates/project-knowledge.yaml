@@ -2,5 +2,5 @@
 version: "1.0"
 layers:
   - id: default
-    name: 既定
+    name: プロジェクトナレッジ
     path: ./project-knowledge

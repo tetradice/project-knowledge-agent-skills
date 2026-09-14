@@ -21,7 +21,7 @@ YAMLを選ぶ理由は、コメントを記述でき、既存のmanifestやPolic
 version: "1.0"
 layers:
   - id: default
-    name: 既定
+    name: プロジェクトナレッジ
     path: ./project-knowledge
 ```
 
@@ -40,11 +40,11 @@ layers:
 version: "1.0"
 layers:
   - id: default
-    name: 既定
+    name: プロジェクトナレッジ
     path: ./project-knowledge
 ```
 
-初期化では`id: default`と`name: 既定`を使い、`description`、`access`、`optional`、`auto_select`、`write_target`を省略する。
+初期化では`id: default`と`name: プロジェクトナレッジ`を使い、`description`、`access`、`optional`、`auto_select`、`write_target`を省略する。
 この設定は省略規則により、説明なし、`access: read-only`、`optional: false`、`write_target: null`として扱う。
 初期化後に知識を記録する場合は、`access: read-write`を明示する。
 生成元コメントは生成時の要件であり、手書きの設定ファイルの有効性判定には使わない。

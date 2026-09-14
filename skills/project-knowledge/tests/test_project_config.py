@@ -18,7 +18,7 @@ def run(name: str, *args: object) -> subprocess.CompletedProcess:
 
 
 def config_text(path: str = "./project-knowledge", access: str | None = None) -> str:
-    data = {"version": "1.0", "layers": [{"id": "default", "name": "既定", "path": path}]}
+    data = {"version": "1.0", "layers": [{"id": "default", "name": "プロジェクトナレッジ", "path": path}]}
     if access:
         data["layers"][0]["access"] = access
     return yaml.safe_dump(data, sort_keys=False)
@@ -33,7 +33,7 @@ def test_generated_config_is_minimal_and_read_write(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     text = (tmp_path / "project-knowledge.yaml").read_text(encoding="utf-8")
     assert text.splitlines()[0] == "# この設定ファイルは project-knowledge skill で生成されました。"
-    assert yaml.safe_load(text) == {"version": "1.0", "layers": [{"id": "default", "name": "既定", "path": "./project-knowledge"}]}
+    assert yaml.safe_load(text) == {"version": "1.0", "layers": [{"id": "default", "name": "プロジェクトナレッジ", "path": "./project-knowledge"}]}
     config = load_config(tmp_path)
     assert config["write_target"] == "default"
     assert config["layers"][0]["access"] == "read-write"
@@ -118,7 +118,7 @@ def test_name_and_auto_select_validation(tmp_path: Path, key: str, value: object
 
 
 @pytest.mark.parametrize("second", [
-    {"id": "team", "name": "既定", "path": "./team", "description": "shared"},
+    {"id": "team", "name": "プロジェクトナレッジ", "path": "./team", "description": "shared"},
     {"id": "team", "name": "default", "path": "./team", "description": "shared"},
     {"id": "team", "name": "チーム用", "path": "./project-knowledge/child", "description": "shared"},
     {"id": "team", "name": "チーム用", "path": "./project-knowledge", "description": "shared"},

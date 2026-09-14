@@ -23,7 +23,7 @@ def registered_writable_project(tmp_path: Path, request: pytest.FixtureRequest) 
     """既存の保守テストを明示登録された書き込み可能プロジェクトで実行する。"""
 
     (tmp_path / "project-knowledge.yaml").write_text(
-        'version: "1.0"\nlayers:\n  - id: default\n    path: ./project-knowledge\n    access: read-write\n',
+        'version: "1.0"\nlayers:\n  - id: default\n    name: プロジェクトナレッジ\n    path: ./project-knowledge\n    access: read-write\n',
         encoding="utf-8",
     )
     if request.node.name.startswith(("test_policy_settings", "test_detect_changes")):

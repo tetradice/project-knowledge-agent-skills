@@ -1,5 +1,6 @@
 # User Statements
 
+- [初期化時の既定レイヤー名](2026-09-15-default-layer-name.md): 初期化で生成する`id: default`レイヤーの`name`を`プロジェクトナレッジ`に固定する方針を確認するときに読む。
 - [複数レイヤーと必須表示名の方針](2026-09-14-multi-layer-display-names.md): 任意数のレイヤー、`id`と必須`name`の役割分離、公開用レイヤーの自動選択除外を確認するときに読む。
 - [`access`省略時の既定値](2026-09-14-default-read-write.md): 通常更新を可能にするため、レイヤーの`access`省略時を`read-write`とする方針を確認するときに読む。
 - [Project Knowledgeのルート設定](2026-09-13-root-configuration.md): 設定ファイルを必須入口とする方針、必須versionとレイヤー項目、descriptionの条件、初期生成項目を確認するときに読む。
