@@ -25,6 +25,10 @@ sources:
   pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge-publish/references/publishing.md
   pk_source_type: change-implementation
+- resource: ../../skills/project-knowledge/references/multi-layer.md
+  pk_source_type: change-implementation
+- resource: ../../skills/project-knowledge/references/split.md
+  pk_source_type: change-implementation
 ---
 # Project Knowledge形式1.0
 
@@ -32,7 +36,7 @@ sources:
 
 `project-knowledge.yaml`はプロジェクトから利用するKnowledge bundleを登録する入口であり、bundle内の`manifest.yml`とは責務が異なる。ルート設定は配置とアクセスを解決し、`manifest.yml`はbundleの形式を宣言する。
 
-ルート設定の`version`は文字列`"1.0"`、`layers`、各レイヤーの`id`と`path`を必須とする。初期実装は0〜1レイヤーだけを受け付け、2件以上は拒否する。`id: default`以外では非空の`description`を必須にし、`access`を省略した場合は`read-write`とする。ユーザーの指示なしにルート設定の版を上げない。
+ルート設定の`version`は文字列`"1.0"`、`layers`、各レイヤーの`id`と`path`を必須とする。任意数のレイヤーを登録できる。新規複数レイヤー初期化では全件を検査してから設定を公開し、既存の単一レイヤーを分ける場合は明示的な`split`だけが元と新規移管先を同時に変更できる。`id: default`以外では非空の`description`を必須とし、`access`を省略した場合は`read-write`とする。ユーザーの指示なしにルート設定の版を上げない。
 
 ## 管理ファイル
 

@@ -1,5 +1,6 @@
 # Interaction Records
 
+- [複数レイヤー初期化と単一レイヤー分割の実装記録](2026-09-15-multi-layer-workflows-implementation.md): 固定配置表、最後の設定公開、移管規則、排他・復旧の実装契約と未記録の検証境界を確認するときに読む。
 - [複数レイヤーと必須表示名の実装記録](2026-09-14-multi-layer-implementation.md): 仕様検討、実装した設定・Skill契約、軽量に留めたテストとBenchmarkの検証境界を確認するときに読む。
 - [通常利用Skillのリリース準備レビュー](2026-09-14-release-readiness-review.md): 対象・除外、重大問題なしの実施証跡、解消済みのREADMEのuv/Python前提とaudit/refactor UI境界、未対応のRuff整形事項を確認するときに読む。
 - [Project Knowledgeルート設定の実装記録](2026-09-13-root-configuration-implementation.md): 設定解決、初期化、関連Skill、検証と未対応の複数レイヤー境界を確認するときに読む。

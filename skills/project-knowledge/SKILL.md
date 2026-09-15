@@ -1,6 +1,6 @@
 ---
 name: project-knowledge
-description: Project Knowledgeを初期構築し、将来価値のあるKnowledgeの追加・更新、内容・根拠・鮮度・形式の検証と修正、収集方針やlearning設定の変更を行う。Project Knowledgeの保守、初期化、明示的な検証・修正依頼に使用する。
+description: Project Knowledgeを単一または複数レイヤーで初期構築し、既存1レイヤーの分割、Knowledgeの追加・更新、内容・根拠・鮮度・形式の検証と修正、収集方針やlearning設定の変更を行う。Project Knowledgeの保守、初期化、分割、明示的な検証・修正依頼に使用する。
 metadata:
   version: "3.1.0"
 ---
@@ -12,6 +12,7 @@ metadata:
 プロジェクトのKnowledgeへアクセスする前に[ルート設定](references/project-config.md)に従って`project_config.py`を実行する。
 `project-knowledge.yaml`がなければ対象外とし、固定ディレクトリから推測しない。一般的な利用案内は設定なしでも説明できる。
 明示的な新規`init`だけは例外であり、[初期化](references/init.md)に従って内容を準備してから登録する。
+明示的な`split`は[分割移行](references/split.md)に従い、元1レイヤーと新規移管先の固定集合だけへ書き込む。通常操作の更新先1件という規則の例外はこの操作だけである。
 以後の`project-knowledge/`表記は解決済みのレイヤーパスを意味する。
 `description`を用途と適用範囲の判断に使い、書き込み前には`--write`で対象を確認する。読み取り専用レイヤーへstateや成果物も保存しない。
 設定の`version: "1.0"`は必須で、ユーザーの指示なしに版を上げない。複数レイヤーでは全件を参照し、更新先は1件だけ選ぶ。`name`は必須の利用者向け呼称、`id`は不変の機械識別子であり、AIは表示と自然言語選択に`name`を使う。曖昧な更新先は`auto_select: true`、書込み可能、利用可能、Policy適合の候補だけから選び、一意に決められなければ書き込まない。
@@ -26,6 +27,7 @@ metadata:
 | 操作 | 選ぶ指示・目印 | 選ばないケース | 読むReference |
 | --- | --- | --- | --- |
 | `init` | 「プロジェクトナレッジを初期化・導入して」「空で初期化して」「既存プロジェクトから初期ナレッジを作って」 | 初期化済みBundleへの通常の追加・同期 | [init.md](references/init.md) |
+| `split` | 「現在のナレッジを複数レイヤーに分けて」「開発・運用を別レイヤーへ取り出して」 | 既存の複数レイヤー間の再配分、本文の意味変更、Concept本文の分割 | [split.md](references/split.md) |
 | `update` | 「ナレッジへ追加・記録・反映・同期」「この会話や判断を覚えて」「実装差分を反映」「検証結果を反映」「何を保存するかという収集方針を変更」 | 設定値の表示・変更だけ、生成済みナレッジへの質問だけ | [update.md](references/update.md) |
 | `verify` | 「Project Knowledgeを検証して」「現在の実装と一致するか確認して」「内容・根拠・鮮度・形式を確認して」 | 通常の質問、通常の開発作業、実装レビュー、未登録情報のcoverage調査、構造や情報設計の監査 | [verification.md](references/verification.md) |
 | `fix` | 「Project Knowledgeの問題を修正して」「Project Knowledgeをfixして」「ナレッジの間違いや古い情報を直して」 | 検査・報告だけ、単なる新情報の追加、Concept統合・分割やKnowledge階層の再設計 | [fix.md](references/fix.md) |

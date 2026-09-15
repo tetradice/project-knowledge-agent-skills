@@ -2,6 +2,7 @@
 
 最初に[ルート設定](project-config.md)から対象を解決する。ルート設定の表示は`project_config.py --project-root <project-root>`を使い、変更は明示されたキーだけに限定する。設定の`version`をユーザーの指示なしに上げない。
 `access`の変更はルート設定で行い、Policyの`learning.mode`や`knowledge.human_readable`とは独立して扱う。
+複数構成の`layers`、用途、権限、`write_target`はルート設定で扱い、レイヤー内Policyの設定変更は明示した1件に限定する。新規の複数設定は[init](init.md)、既存文書の配置変更を伴う単一レイヤーの分割は[split](split.md)を使う。configだけで文書を移動しない。
 
 Knowledgeの育成・記述方針に属する設定を表示・変更する。保存先は`knowledge-policy.md`のYAML frontmatterであり、Policy本文や未知キーを変更しない。
 

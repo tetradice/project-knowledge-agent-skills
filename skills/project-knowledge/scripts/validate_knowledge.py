@@ -262,6 +262,7 @@ def check_concept(
     metadata: dict[str, Any] | None,
     parse_error: str | None,
     root: Path,
+    *, source_root: Path | None = None, resolve_target=None,
 ) -> None:
     if parse_error:
         add(findings, "high", f"frontmatter-{parse_error}", path, root)
@@ -277,7 +278,7 @@ def check_concept(
         check_reference(findings, path, metadata, root)
     else:
         check_classification(findings, path, metadata, root)
-    check_sources(findings, path, metadata, root)
+    check_sources(findings, path, metadata, root, source_root=source_root, resolve_target=resolve_target)
     check_actor_event(findings, path, metadata.get("generated"), "generated", root, True)
     check_actor_event(findings, path, metadata.get("verified"), "verified", root, False)
     check_lifecycle(findings, path, metadata, root)
@@ -323,6 +324,7 @@ def check_sources(
     path: Path,
     metadata: dict[str, Any],
     root: Path,
+    *, source_root: Path | None = None, resolve_target=None,
 ) -> None:
     sources = metadata.get("sources", [])
     if not isinstance(sources, list):
@@ -336,7 +338,9 @@ def check_sources(
         if not isinstance(resource, str) or not resource.strip():
             add(findings, "high", "missing-source-resource", path, root)
         elif not is_uri(resource):
-            target = (path.parent / resource.split("#", 1)[0]).resolve()
+            target = resolve_source_resource(path, resource, source_root or root / "docs", resolve_target)
+            if resolve_target is not None:
+                target = resolve_target(target)
             if not target.is_file():
                 add(findings, "high", "missing-source-resource", target, root)
             elif not is_readable_source(target):
@@ -344,6 +348,18 @@ def check_sources(
         source_type = source.get("pk_source_type")
         if source_type not in SOURCE_TYPES:
             add(findings, "high", "invalid-source-type", path, root)
+
+
+def resolve_source_resource(path: Path, resource: str, docs: Path, resolve_target=None) -> Path:
+    """docs基準を優先し、実在しない場合だけ旧文書相対sourceを互換解決する。"""
+
+    value = resource.split("#", 1)[0]
+    canonical = (docs / value).resolve()
+    legacy = (path.parent / value).resolve()
+    physical = resolve_target or (lambda target: target)
+    if physical(canonical).is_file() or not physical(legacy).is_file():
+        return canonical
+    return legacy
 
 
 def is_readable_source(path: Path) -> bool:

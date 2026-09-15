@@ -159,11 +159,13 @@ def _check_mapping_nodes(node: yaml.Node | None, path: Path) -> None:
             _check_mapping_nodes(value, path)
 
 
-def load_config(project_root: Path, *, allow_missing: bool = False, check_manifest: bool = True) -> dict:
+def load_config(project_root: Path, *, allow_missing: bool = False, check_manifest: bool = True, _operation: bool = False) -> dict:
     """明示ルートの設定だけを読み、レイヤーの利用可能性を確認する。"""
 
     config_path = project_root.resolve() / CONFIG_NAME
     try:
+        if not _operation and (project_root.resolve() / ".project-knowledge.lock").exists():
+            raise ConfigError("Knowledge operation in progress; resume or recover the recorded operation first")
         if config_path.is_symlink():
             raise ConfigError(f"{config_path}: config must not be a symbolic link")
         config = parse_config(config_path.read_text(encoding="utf-8-sig"), config_path)

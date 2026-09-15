@@ -65,12 +65,20 @@ sources:
   pk_source_type: interaction-record
 - resource: ../references/interactions/2026-09-14-multi-layer-implementation.md
   pk_source_type: interaction-record
+- resource: references/user-statements/2026-09-15-multi-layer-workflows.md
+  pk_source_type: user-statement
+- resource: references/interactions/2026-09-15-multi-layer-workflows-implementation.md
+  pk_source_type: interaction-record
+- resource: ../../skills/project-knowledge/references/multi-layer.md
+  pk_source_type: change-implementation
+- resource: ../../skills/project-knowledge/references/split.md
+  pk_source_type: change-implementation
 ---
 # プロジェクトナレッジ Skill
 
 ## 責務と操作
 
-メインの`project-knowledge`は`init`、`update`、`verify`、`fix`、`config`を扱い、Knowledgeを構築、追加、更新、検証、修正、設定して保守する。利用案内、Knowledge Baseの説明、Knowledge限定回答、成果物生成、構造監査・構造改善、Knowledgeなし・ありの実務比較は、それぞれ`project-knowledge-help`、`project-knowledge-inspect`、`project-knowledge-fast-ask`、`project-knowledge-publish`、`project-knowledge-audit`、`project-knowledge-benchmark`へ分離する。
+メインの`project-knowledge`は`init`、`split`、`update`、`verify`、`fix`、`config`を扱い、Knowledgeを構築、分割、追加、更新、検証、修正、設定して保守する。利用案内、Knowledge Baseの説明、Knowledge限定回答、成果物生成、構造監査・構造改善、Knowledgeなし・ありの実務比較は、それぞれ`project-knowledge-help`、`project-knowledge-inspect`、`project-knowledge-fast-ask`、`project-knowledge-publish`、`project-knowledge-audit`、`project-knowledge-benchmark`へ分離する。
 
 `project-knowledge-help`はexplicit-onlyのread-only Skillである。対象なしでは5基本操作の用途、操作名指定、自然言語例と、利用者向け5専用Skillの明示呼び出し例を定型形式で説明する。対象指定ありと未知対象には別の定型を使い、説明した操作やSkillを自動実行しない。旧形式の`$project-knowledge help`は互換実行せず、新Skillを案内する。
 
@@ -92,7 +100,7 @@ sources:
 
 Project Knowledgeへアクセスする前に、プロジェクトルートの`project-knowledge.yaml`を解決する。設定がなければ対象外であり、固定の`project-knowledge/`配置やmanifestから推測しない。解決結果のプロジェクトルートと全レイヤーのパスを以後の基準とする。参照操作は全レイヤーを対象にしてレイヤーIDを結果へ付け、書込みは明示指定、明確な`name`または`id`指定、Policyに適合する一意なAI候補、`write_target`の順で書込み可能な1レイヤーを選ぶ。
 
-全SkillはProject Knowledge形式1.0だけを扱う。解決済みレイヤーのmanifestがない、壊れている、形式名または版が異なる場合は推測せず停止する。`init`は未登録プロジェクトへの設定作成、または形式1.0の既存Bundleの登録だけを扱う。
+全SkillはProject Knowledge形式1.0だけを扱う。解決済みレイヤーのmanifestがない、壊れている、形式名または版が異なる場合は推測せず停止する。`init`は未登録プロジェクトへの単一または複数レイヤー設定の作成、または形式1.0の既存Bundleの登録を扱う。複数レイヤーでは全レイヤーの候補を検査して設定を最後に公開する。`split`は既存単一レイヤーと明示した新規レイヤーの固定集合を、確定済み配置表に基づき変更する。通常の`update`や`refactor`はレイヤーを再配分しない。
 
 ## KnowledgeとIndex
 

@@ -273,7 +273,7 @@ def test_skill_contract_exposes_maintenance_operations() -> None:
         if line.startswith("| `")
     }
     # 公開操作と対応Referenceの構造をSkill契約として固定
-    assert operations == {"init", "update", "verify", "fix", "config"}
+    assert operations == {"init", "split", "update", "verify", "fix", "config"}
     for reference in (
         "init.md",
         "update.md",

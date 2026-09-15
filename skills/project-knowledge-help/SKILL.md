@@ -27,7 +27,7 @@ Project Knowledgeの基本操作と利用者向け専用Skillを、決められ�
 
 既知の対象は次のとおり。
 
-- 基本操作: `init`、`update`、`verify`、`fix`、`config`
+- 基本操作: `init`、`split`、`update`、`verify`、`fix`、`config`
 - 専用Skill: `inspect`、`fast-ask`、`publish`、`audit`、`refactor`、`benchmark`
 - 専用Skillの正式名も受け付ける: `project-knowledge-inspect`、`project-knowledge-fast-ask`、`project-knowledge-publish`、`project-knowledge-audit`、`project-knowledge-benchmark`
 
@@ -44,6 +44,7 @@ Project Knowledgeの基本操作と利用者向け専用Skillを、決められ�
 | 操作 | 用途 | 操作名指定 | 自然言語例 |
 | --- | --- | --- | --- |
 | `init` | Project Knowledgeを空または既存プロジェクトの情報から初期構築する | `$project-knowledge init` | `プロジェクトナレッジを初期化してください。` |
+| `split` | 既存1レイヤーの文書を、内容を保持して新規レイヤーへ分ける | `$project-knowledge split` | `開発・運用情報を別レイヤーへ分けてください。` |
 | `update` | 将来価値のある情報、実装差分、収集方針をKnowledgeへ反映する | `$project-knowledge update` | `今回決めた認証方式をナレッジに残してください。` |
 | `verify` | Knowledgeの内容、根拠、鮮度、形式を読み取り専用で検証する | `$project-knowledge verify` | `Project Knowledgeが現在の実装と一致するか検証してください。` |
 | `fix` | 既存Knowledgeの明白な問題を検査して修正し、再検査する | `$project-knowledge fix` | `Project Knowledgeの間違いや古い情報を修正してください。` |
@@ -61,7 +62,9 @@ Project Knowledgeの基本操作と利用者向け専用Skillを、決められ�
 
 ## 詳細ヘルプ
 
-対象だけを詳しく確認するには、`$project-knowledge-help init`や`$project-knowledge-help publish`のように指定する。有効な対象は`inspect`、`init`、`update`、`verify`、`fix`、`config`、`fast-ask`、`publish`、`audit`、`refactor`、`benchmark`である。
+対象だけを詳しく確認するには、`$project-knowledge-help init`や`$project-knowledge-help publish`のように指定する。有効な対象は`inspect`、`init`、`split`、`update`、`verify`、`fix`、`config`、`fast-ask`、`publish`、`audit`、`refactor`、`benchmark`である。
+
+`init`の詳細では、用途を指定した複数レイヤー初期化と明示的な空初期化を案内する。`split`では元を残す既定動作、固定配置表、候補検査、失敗時の復旧を説明する。通常updateやrefactorでは自動分割しない。分割後のルート設定変更と各レイヤーのPolicy変更は`config`で区別する。
 
 ## 対象指定ありの出力
 
@@ -103,7 +106,7 @@ Project Knowledgeの基本操作と利用者向け専用Skillを、決められ�
 なし
 
 ## 呼び出し方
-- 有効な対象: `inspect`、`init`、`update`、`verify`、`fix`、`config`、`fast-ask`、`publish`、`audit`、`refactor`、`benchmark`
+- 有効な対象: `inspect`、`init`、`split`、`update`、`verify`、`fix`、`config`、`fast-ask`、`publish`、`audit`、`refactor`、`benchmark`
 
 ## 主な結果
 有効な対象を指定すると、その対象だけの定型ヘルプを返します。

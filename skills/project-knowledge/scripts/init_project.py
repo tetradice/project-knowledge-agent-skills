@@ -30,8 +30,28 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("project_root", type=Path)
     parser.add_argument("--layer")
+    parser.add_argument("--layers", type=Path, help="確定済み複数レイヤー定義JSON")
+    parser.add_argument("--plan", type=Path, help="初期収集の配置表JSON（登録時）")
+    parser.add_argument("--empty", action="store_true", help="複数レイヤーを明示的に空で登録")
     parser.add_argument("--prepare", action="store_true", help="新規initの本文生成に先立ち骨組みだけを作り、設定登録を保留する")
     args = parser.parse_args()
+
+    if args.layers:
+        from layer_workflow import initialize
+        try:
+            if args.layer:
+                raise ConfigError("--layer and --layers cannot be combined")
+            initialize(args.project_root.resolve(), args.layers, prepare=args.prepare,
+                       plan_path=args.plan, empty=args.empty)
+            return 0
+        except (ConfigError, OSError, ValueError) as exc:
+            print(f"Cannot initialize project-knowledge: {exc}", file=sys.stderr)
+            return 2
+    if args.plan or args.empty:
+        parser.error("--plan and --empty require --layers")
+    if (args.project_root.resolve() / ".project-knowledge.lock").exists():
+        print("Knowledge operation in progress; resume or recover it first", file=sys.stderr)
+        return 2
 
     # 初期化先を確定し、既存Bundleが現行形式であることを確認
     project_root = args.project_root.resolve()
