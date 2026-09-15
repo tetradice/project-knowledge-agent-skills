@@ -48,6 +48,12 @@ npx skills add https://github.com/tetradice/project-knowledge-agent-skills
 $project-knowledge init
 ```
 
+または、自然言語で次のように依頼できます。
+
+```text
+プロジェクトナレッジを初期化してください。
+```
+
 初期化を指示すると、既存プロジェクトをもとにナレッジが作られます。
 何を残すかを最初から細かく指定する必要はありません。
 
@@ -57,6 +63,12 @@ $project-knowledge init
 
 ```text
 $project-knowledge-fast-ask 認証方式と、その採用理由を教えてください。
+```
+
+または、自然言語で次のように依頼できます。
+
+```text
+認証方式と、その採用理由を教えてください。
 ```
 
 `fast-ask` は、保存済みのナレッジから必要な情報を探して回答します。
@@ -74,6 +86,11 @@ $project-knowledge-fast-ask 認証方式と、その採用理由を教えてく�
 
 ```text
 $project-knowledge update
+```
+
+または、自然言語で次のように依頼できます。
+
+```text
 今回決めた認証方式と採用理由をナレッジに残してください。
 ```
 
@@ -96,6 +113,11 @@ $project-knowledge update
 
 ```text
 $project-knowledge config
+```
+
+または、自然言語で次のように依頼できます。
+
+```text
 今後は明示的に依頼したときだけ更新してください。
 ```
 
@@ -154,6 +176,12 @@ $project-knowledge config
 
 ```text
 $project-knowledge-help update
+```
+
+または、自然言語で次のように依頼できます。
+
+```text
+Project Knowledgeを更新する方法を教えてください。
 ```
 
 ナレッジの内容が現在の実装と一致するか調べるなら、メインスキルの `verify`、問題の修正まで依頼するなら `fix` を使います。
