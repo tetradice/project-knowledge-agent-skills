@@ -57,6 +57,33 @@ $project-knowledge init
 初期化を指示すると、既存プロジェクトをもとにナレッジが作られます。
 何を残すかを最初から細かく指定する必要はありません。
 
+初期化直後には、次のフォルダとファイルが作られます。
+
+```text
+プロジェクト/
+├── project-knowledge.yaml
+├── AGENTS.md
+└── project-knowledge/
+    ├── .gitignore
+    ├── knowledge-policy.md
+    ├── manifest.yml
+    ├── state.yml
+    ├── docs/
+    │   ├── index.md
+    │   ├── log.md
+    │   └── references/
+    │       ├── index.md
+    │       ├── interactions/
+    │       │   └── index.md
+    │       └── user-statements/
+    │           └── index.md
+    └── published/
+        ├── html/
+        └── markdown/
+```
+
+通常の初期化では、調査結果に応じたナレッジ本文も`docs/`の下に追加されます。
+
 ### 保存した内容に質問する
 
 ナレッジができたら、同じプロジェクトで質問してみます。
