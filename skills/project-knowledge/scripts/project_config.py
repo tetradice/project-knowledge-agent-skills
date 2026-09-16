@@ -99,12 +99,18 @@ def parse_config(text: str, config_path: Path, *, resolve_symlinks: bool = True)
             fail(key + ".description", "must be a string; non-default IDs require a nonblank description")
         path = item.get("path")
         if not isinstance(path, str) or not path.strip():
-            fail(key + ".path", "required nonblank relative path")
-        if PureWindowsPath(path).drive or path.startswith(("/", "~")) or any(c in path for c in "\\:$%*?[]\x00"):
-            fail(key + ".path", "must be a project-relative path without expansion or glob")
-        resolved = (root / path).resolve() if resolve_symlinks else Path(os.path.abspath(root / path))
-        if resolved == root or not resolved.is_relative_to(root):
-            fail(key + ".path", "must be a directory strictly inside the project")
+            fail(key + ".path", "required nonblank path")
+        windows_path = PureWindowsPath(path)
+        if (path.startswith("~") or "$" in path or "%" in path or (windows_path.drive and not windows_path.is_absolute())
+                or any(c in path for c in "*?[]\x00") or re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://", path)):
+            fail(key + ".path", "must not use expansion, URI or glob")
+        # 相対・絶対・UNCを同じ実体パスへ正規化する。リンク先も登録先として扱う。
+        raw_path = Path(path)
+        if not raw_path.is_absolute() and not windows_path.is_absolute():
+            raw_path = root / raw_path
+        resolved = raw_path.resolve() if resolve_symlinks else Path(os.path.abspath(raw_path))
+        if resolved == root:
+            fail(key + ".path", "must not be the project root")
         access = item.get("access", "read-write")
         if access not in ("read-only", "read-write"):
             fail(key + ".access", "must be read-only or read-write")

@@ -57,16 +57,16 @@ def initialize(root: Path, definition_path: Path, *, prepare: bool = False,
 
     # 骨組みは作成済みの内容を記録し、再開時の変更を上書きしない。
     for layer in config["layers"]:
-        for relative, data in skeleton(root, layer).items():
-            path = root / relative
+        for key, data in skeleton(root, layer).items():
+            path = operation_path(key)
             if path.exists():
-                if relative not in record["created"]:
-                    raise ConfigError(f"unowned initialization file: {relative}")
+                if key not in record["created"]:
+                    raise ConfigError(f"unowned initialization file: {display_path(root, path)}")
                 continue
-            if relative in record["created"] and record.get("pending_create") != relative:
-                raise ConfigError(f"prepared file was removed: {relative}")
-            record["created"][relative] = digest(data)
-            record["pending_create"] = relative
+            if key in record["created"] and record.get("pending_create") != key:
+                raise ConfigError(f"prepared file was removed: {display_path(root, path)}")
+            record["created"][key] = digest(data)
+            record["pending_create"] = key
             save_json(record_path, record)
             write_bytes(path, data)
             record.pop("pending_create", None)
@@ -84,7 +84,7 @@ def initialize(root: Path, definition_path: Path, *, prepare: bool = False,
     if findings:
         raise ConfigError(f"initialization findings: {findings}")
     updates = managed_files(root, config)
-    updates[CONFIG_NAME] = config_text.encode("utf-8")
+    updates[operation_key(root / CONFIG_NAME)] = config_text.encode("utf-8")
     # 準備後の本文は配置表とともに検査済み。公開前の入力変化も検出する。
     assert_snapshot(root, record["baseline"])
     baseline = inventory(root, config)
@@ -120,18 +120,18 @@ def prepare_split(root: Path, plan_path: Path) -> None:
     # 元以外のレイヤーと外部Markdownも読み、書換えを要する参照を漏らさない。
     baseline = inventory(root, config)
     for layer in new_layers:
-        baseline[layer_relative(root, layer)] = None
+        baseline[operation_key(Path(layer["resolved_path"]))] = None
     before = inspect_candidates(root, config, {})
     if any(item[2] == "high" for item in before):
         raise ConfigError(f"cannot decide migration with existing structural errors: {before}")
     updates, report = split_candidates(root, config, final_config, source, plan)
     updates.update(managed_files(root, final_config))
-    updates[CONFIG_NAME] = config_text.encode("utf-8")
+    updates[operation_key(root / CONFIG_NAME)] = config_text.encode("utf-8")
     work.mkdir()
     record = {"kind": "split", "plan": plan, "status": "preparing", "baseline": baseline,
               "before_findings": before, "report": report, "updates": {}, "backups": {}}
     # 全入力のbytesを保存し、未追跡文書も復旧可能にする。
-    record["inputs"] = {key: encode((root / key).read_bytes()) for key, value in baseline.items() if value is not None}
+    record["inputs"] = {key: encode(operation_path(key).read_bytes()) for key, value in baseline.items() if value is not None}
     save_json(record_path, record)
     store_candidates(root, record, updates)
     after = inspect_candidates(root, final_config, updates)
@@ -192,19 +192,19 @@ def recover(root: Path) -> None:
         raise ConfigError("no interrupted switch to recover")
     record["status"] = "recovering"
     save_json(root / WORK / "record.json", record)
-    for relative in reversed(record.get("pending", [])):
-        path = safe_path(root, relative)
-        before = record["backups"][relative]
+    for key in reversed(record.get("pending", [])):
+        path = operation_path(key)
+        before = record["backups"][key]
         original = decode(before) if before is not None else None
         current = path.read_bytes() if path.is_file() else None
-        expected = record["updates"][relative]
+        expected = record["updates"][key]
         if current == original:
             continue
         if (digest(current) if current is not None else None) != expected:
-            raise ConfigError(f"recovery conflicts with a later edit: {relative}; lock retained")
+            raise ConfigError(f"recovery conflicts with a later edit: {display_path(root, path)}; lock retained")
         replace_file(path, original)
-    for relative in sorted(record.get("created_dirs", []), key=lambda x: len(Path(x).parts), reverse=True):
-        directory = safe_path(root, relative)
+    for key in sorted(record.get("created_dirs", []), key=lambda x: len(operation_path(x).parts), reverse=True):
+        directory = operation_path(key)
         if directory.is_dir() and not any(directory.iterdir()):
             directory.rmdir()
     record["status"] = "prepared" if record["kind"] == "split" else "preparing"
@@ -344,9 +344,9 @@ def split_candidates(root: Path, old_config: dict, config: dict, source: dict, p
             if original.suffix.lower() == ".md":
                 data = rewrite_document(data, original, destination, source_docs,
                                         Path(layers[layer_id]["resolved_path"]) / "docs", mapping, layer_id, layers)
-            updates[destination.relative_to(root).as_posix()] = data
+            updates[operation_key(destination)] = data
         if not any(destination == original for _, destination in targets):
-            updates[original.relative_to(root).as_posix()] = None
+            updates[operation_key(original)] = None
     # 元以外の参照元を書き換える必要がある計画は、権限に関係なく範囲外として止める。
     moved = {p for p, targets in mapping.items() if not any(dst == p for _, dst in targets)}
     for path in external_markdown(root, old_config, source_docs):
@@ -360,13 +360,13 @@ def split_candidates(root: Path, old_config: dict, config: dict, source: dict, p
     if retained:
         log = rewrite_document(old_log.read_bytes(), old_log, old_log, source_docs, source_docs,
                                mapping, source["id"], layers)
-        updates[old_log.relative_to(root).as_posix()] = log
+        updates[operation_key(old_log)] = log
     else:
         history = plan.get("history_layer")
         if history not in layers or history not in allowed:
             raise ConfigError("retiring the source requires a fixed history_layer")
         destination = Path(layers[history]["resolved_path"]) / "docs" / "log.md"
-        updates[destination.relative_to(root).as_posix()] = rewrite_document(
+        updates[operation_key(destination)] = rewrite_document(
             old_log.read_bytes(), old_log, destination, source_docs, destination.parent, mapping, history, layers)
         # publish成果物とPolicyを含む旧ディレクトリは履歴保全のため残し、登録だけ解除する。
     for layer in config["layers"]:
@@ -374,15 +374,15 @@ def split_candidates(root: Path, old_config: dict, config: dict, source: dict, p
             continue
         docs = Path(layer["resolved_path"]) / "docs"
         rebuild_indexes(root, docs, updates)
-        relative = (docs / "log.md").relative_to(root).as_posix()
-        log = updates.get(relative, (docs / "log.md").read_bytes() if (docs / "log.md").exists() else b"# Change Log\n")
+        key = operation_key(docs / "log.md")
+        log = updates.get(key, (docs / "log.md").read_bytes() if (docs / "log.md").exists() else b"# Change Log\n")
         entry = "\n## " + date.today().isoformat() + "\n\nLayer split (" + source["id"] + ")\n\n"
         entry += "\n".join(f"- `{row['source']}` -> `{row['layer']}:{row['path']}`: {row['reason']}" for row in report) + "\n"
-        updates[relative] = log + entry.encode("utf-8")
-        updates[(docs.parent / "state.yml").relative_to(root).as_posix()] = (TEMPLATES / "state.yml").read_bytes()
+        updates[key] = log + entry.encode("utf-8")
+        updates[operation_key(docs.parent / "state.yml")] = (TEMPLATES / "state.yml").read_bytes()
         snapshot_path = docs.parent / ".cache" / "source-snapshot.json"
         if snapshot_path.is_file():
-            updates[snapshot_path.relative_to(root).as_posix()] = None
+            updates[operation_key(snapshot_path)] = None
     # 明示した依存Referenceが同じ移管先で参照可能であることを確認する。
     for row in rows:
         for reference in row["references"]:
@@ -462,31 +462,34 @@ def inspect_candidates(root: Path, config: dict, updates: dict) -> list:
     # 通常CLIの登録必須を緩めず、未登録候補だけをこの内部関数で扱う。
     def resolve(path: Path) -> Path:
         """候補ファイルへ写像し、削除候補は存在しないパスに写像する。"""
-        if path.is_relative_to(root):
-            relative = path.relative_to(root).as_posix()
-            if relative in updates:
-                return temporary / relative
+        key = operation_key(path)
+        if key in updates:
+            return candidate_path(root, key)
         return path
 
     if updates:
-        for relative, data in updates.items():
+        for key, data in updates.items():
             if data is not None:
-                write_bytes(temporary / relative, data)
-            elif (temporary / relative).is_file():
-                (temporary / relative).unlink()
+                write_bytes(candidate_path(root, key), data)
+            elif candidate_path(root, key).is_file():
+                candidate_path(root, key).unlink()
     for layer in config["layers"]:
         final = Path(layer["resolved_path"])
-        if layer["optional"] and not final.exists() and not any((root / key).is_relative_to(final) for key in updates):
+        if layer["optional"] and not final.exists() and not any(operation_path(key).is_relative_to(final) for key in updates):
             continue
         files = virtual_files(root, final, updates)
         structural = []
         # 小さな管理ファイルだけを同じ物理bundleに揃えて既存検査を再利用する。
-        check_root = temporary / layer_relative(root, layer) if updates else final
+        check_root = temporary / "bundles" / layer["id"] if updates else final
         if updates:
-            for filename in ("manifest.yml", "knowledge-policy.md", "state.yml"):
-                relative = (final / filename).relative_to(root).as_posix()
-                if relative not in updates and (final / filename).is_file():
-                    write_bytes(check_root / filename, (final / filename).read_bytes())
+            # 候補と既存ファイルを同じ仮想bundleへ写し、外部レイヤーも既存validatorで検査する。
+            for path in final.rglob("*"):
+                if path.is_file() and operation_key(path) not in updates:
+                    write_bytes(check_root / path.relative_to(final), path.read_bytes())
+            for key, data in updates.items():
+                path = operation_path(key)
+                if data is not None and path.is_relative_to(final):
+                    write_bytes(check_root / path.relative_to(final), data)
         validator.check_manifest(structural, check_root)
         validator.check_knowledge_policy(structural, check_root)
         validator.check_state(structural, check_root)
@@ -540,18 +543,19 @@ def commit_changes(root: Path, record: dict, updates: dict, baseline: dict, conf
                     key: value for key, value in baseline.items() if value is not None}:
                 raise ConfigError("project inputs changed while acquiring the operation lock")
         store_candidates(root, record, updates)
-        created_dirs = {parent.relative_to(root).as_posix() for relative, data in updates.items()
-                        if data is not None for parent in (root / relative).parents
-                        if parent != root and parent.is_relative_to(root) and not parent.exists()}
+        created_dirs = {operation_key(parent) for key, data in updates.items()
+                        if data is not None for parent in operation_path(key).parents
+                        if parent != root and not parent.exists()}
         record.update(status="applying", pending=[], created_dirs=sorted(created_dirs))
         save_json(root / WORK / "record.json", record)
-        order = sorted(key for key in updates if key != CONFIG_NAME) + [CONFIG_NAME]
-        for relative in order:
-            if relative not in updates:
+        config_key = operation_key(root / CONFIG_NAME)
+        order = sorted(key for key in updates if key != config_key) + [config_key]
+        for key in order:
+            if key not in updates:
                 continue
-            record["pending"].append(relative)
+            record["pending"].append(key)
             save_json(root / WORK / "record.json", record)
-            replace_file(safe_path(root, relative), updates[relative])
+            replace_file(operation_path(key), updates[key])
         actual = load_config(root, _operation=True)
         if [{key: x[key] for key in LAYER_KEYS} for x in actual["layers"]] != [
                 {key: x[key] for key in LAYER_KEYS} for x in config["layers"]] or actual["write_target"] != config["write_target"]:
@@ -616,15 +620,17 @@ def validate_initial_plan(root: Path, config: dict, plan: dict, empty: bool) -> 
 
 def skeleton(root: Path, layer: dict, *, policy: bytes | None = None) -> dict:
     """既存テンプレートと版を使い、レイヤー固有の骨組みを生成する。"""
-    prefix = layer_relative(root, layer)
+    directory = Path(layer["resolved_path"])
     names = {"manifest.yml": "manifest.yml", "knowledge-policy.md": "knowledge-policy.md",
              "state.yml": "state.yml", "docs/index.md": "index.md", "docs/log.md": "log.md",
              "docs/references/index.md": "reference-index.md",
              "docs/references/user-statements/index.md": "user-statements-index.md",
              "docs/references/interactions/index.md": "interactions-index.md", ".gitignore": "project.gitignore"}
-    files = {f"{prefix}/{name}": (TEMPLATES / template).read_bytes() for name, template in names.items()}
-    files[f"{prefix}/docs/index.md"] = files[f"{prefix}/docs/index.md"].replace(b"{{project_name}}", layer["name"].encode("utf-8"))
-    files[f"{prefix}/knowledge-policy.md"] = (policy if policy is not None else files[f"{prefix}/knowledge-policy.md"]) + (
+    files = {operation_key(directory / name): (TEMPLATES / template).read_bytes() for name, template in names.items()}
+    index_key = operation_key(directory / "docs/index.md")
+    policy_key = operation_key(directory / "knowledge-policy.md")
+    files[index_key] = files[index_key].replace(b"{{project_name}}", layer["name"].encode("utf-8"))
+    files[policy_key] = (policy if policy is not None else files[policy_key]) + (
         "\n\n## レイヤーの保存範囲\n\n" + layer["description"] + "\n").encode("utf-8")
     return files
 
@@ -639,7 +645,7 @@ def rebuild_indexes(root: Path, docs: Path, updates: dict) -> None:
         text = ('---\nokf_version: "0.2"\n---\n\n' if directory == docs else "")
         text += "# " + ("Knowledge" if directory == docs else directory.name) + "\n\n"
         text += "".join(f"- [{path.relative_to(directory).as_posix()}]({path.relative_to(directory).as_posix()})\n" for path in entries)
-        updates[(directory / "index.md").relative_to(root).as_posix()] = text.encode("utf-8")
+        updates[operation_key(directory / "index.md")] = text.encode("utf-8")
 
 
 def managed_files(root: Path, config: dict) -> dict:
@@ -647,6 +653,7 @@ def managed_files(root: Path, config: dict) -> dict:
     result = {}
     agents = (TEMPLATES / "agents-block.md").read_text(encoding="utf-8").strip()
     ignores = [f"/{layer_relative(root, layer)}/{suffix}" for layer in config["layers"]
+               if Path(layer["resolved_path"]).is_relative_to(root)
                for suffix in ("state.yml", ".cache/")]
     ignores += [f"/{WORK}/", f"/{LOCK}"]
     for filename, start, end, block in (
@@ -659,7 +666,7 @@ def managed_files(root: Path, config: dict) -> dict:
         if current.count(start) != current.count(end) or current.count(start) > 1:
             raise ConfigError(f"ambiguous managed block in {filename}")
         updated = re.sub(re.escape(start) + r".*?" + re.escape(end), lambda _: block, current, flags=re.DOTALL) if start in current else current.rstrip() + ("\n\n" if current else "") + block + "\n"
-        result[filename] = updated.encode("utf-8")
+        result[operation_key(root / filename)] = updated.encode("utf-8")
     return result
 
 
@@ -698,57 +705,57 @@ def inventory(root: Path, config: dict) -> dict:
         docs = next((Path(layer["resolved_path"]) / "docs" for layer in config["layers"]
                      if path.is_relative_to(Path(layer["resolved_path"]) / "docs")), path.parent)
         for target in document_targets(path.read_text(encoding="utf-8"), path, docs):
-            if target.is_relative_to(root) and target.is_file():
+            if target.is_file() and (target.is_relative_to(root) or any(
+                    target.is_relative_to(Path(layer["resolved_path"])) for layer in config["layers"])):
                 paths.append(target)
     return snapshot(root, paths)
 
 
 def snapshot(root: Path, paths: list[Path]) -> dict:
-    """symlinkを拒否し、復旧対象のbytesに対する指紋を記録する。"""
+    """登録済み対象のbytesに対する指紋を絶対パスで記録する。"""
     result = {}
     for path in sorted(set(paths)):
-        relative = path.relative_to(root).as_posix()
-        safe_path(root, relative)
-        result[relative] = digest(path.read_bytes()) if path.is_file() else None
+        key = operation_key(path)
+        result[key] = digest(path.read_bytes()) if path.is_file() else None
     return result
 
 
 def assert_snapshot(root: Path, baseline: dict) -> None:
     """観測済みファイルの変更、削除、新規パスの占有を検出する。"""
-    for relative, expected in baseline.items():
-        path = safe_path(root, relative)
+    for key, expected in baseline.items():
+        path = operation_path(key)
         actual = digest(path.read_bytes()) if path.is_file() else None
         if actual != expected or (expected is None and path.exists()):
-            raise ConfigError(f"input changed since preparation: {relative}; rebuild the candidate")
+            raise ConfigError(f"input changed since preparation: {display_path(root, path)}; rebuild the candidate")
 
 
 def store_candidates(root: Path, record: dict, updates: dict) -> None:
     """候補と原本を保存し、再開時には候補の指紋も照合する。"""
-    for relative, data in updates.items():
-        path = safe_path(root, relative)
-        record.setdefault("backups", {})[relative] = encode(path.read_bytes()) if path.is_file() else None
-        record.setdefault("updates", {})[relative] = digest(data) if data is not None else None
+    for key, data in updates.items():
+        path = operation_path(key)
+        record.setdefault("backups", {})[key] = encode(path.read_bytes()) if path.is_file() else None
+        record.setdefault("updates", {})[key] = digest(data) if data is not None else None
         if data is not None:
-            write_bytes(root / WORK / "candidate" / relative, data)
+            write_bytes(candidate_path(root, key), data)
     save_json(root / WORK / "record.json", record)
 
 
 def read_candidates(root: Path, record: dict) -> dict:
     """記録した候補だけを読み、生成後の候補改変を拒否する。"""
     updates = {}
-    for relative, expected in record["updates"].items():
-        data = safe_path(root / WORK / "candidate", relative).read_bytes() if expected is not None else None
+    for key, expected in record["updates"].items():
+        data = candidate_path(root, key).read_bytes() if expected is not None else None
         if data is not None and digest(data) != expected:
-            raise ConfigError(f"candidate was edited: {relative}")
-        updates[relative] = data
+            raise ConfigError(f"candidate was edited: {display_path(root, operation_path(key))}")
+        updates[key] = data
     return updates
 
 
 def virtual_files(root: Path, directory: Path, updates: dict) -> set[Path]:
     """実ファイルへ候補の作成・削除を重ねた最終ファイル集合を返す。"""
     files = {p for p in directory.rglob("*") if p.is_file()}
-    for relative, data in updates.items():
-        path = root / relative
+    for key, data in updates.items():
+        path = operation_path(key)
         if path.is_relative_to(directory):
             if data is None:
                 files.discard(path)
@@ -786,6 +793,30 @@ def safe_path(root: Path, relative: str) -> Path:
 def layer_relative(root: Path, layer: dict) -> str:
     """解決済みレイヤーをプロジェクト相対表記にする。"""
     return Path(layer["resolved_path"]).relative_to(root).as_posix()
+
+
+def operation_key(path: Path) -> str:
+    """切替対象を、プロジェクト外でも衝突しない正規化済み絶対パスで識別する。"""
+    return str(path.resolve())
+
+
+def operation_path(key: str) -> Path:
+    """操作記録の絶対パスだけを復元する。"""
+    path = Path(key)
+    if not path.is_absolute():
+        raise ConfigError(f"invalid operation path: {key}")
+    return path
+
+
+def candidate_path(root: Path, key: str) -> Path:
+    """外部パスを作業ディレクトリへ安全な固定名で対応付ける。"""
+    return root / WORK / "candidate" / hashlib.sha256(key.encode("utf-8")).hexdigest()
+
+
+def display_path(root: Path, path: Path) -> str:
+    """プロジェクト内は相対、外部は解決済み絶対パスで表示する。"""
+    resolved = path.resolve()
+    return resolved.relative_to(root).as_posix() if resolved.is_relative_to(root) else str(resolved)
 
 
 def replace_file(path: Path, data: bytes | None) -> None:

@@ -93,10 +93,34 @@ def test_description_multiline_and_optional_defaults(tmp_path: Path) -> None:
     assert config["layers"][0]["auto_select"]
 
 
-@pytest.mark.parametrize("path", ["../outside", ".", "/tmp/kb", "C:/kb", "C:kb", "~/kb", "${ROOT}/kb", "./*/kb", "https://host/kb"])
-def test_paths_are_project_relative(tmp_path: Path, path: str) -> None:
+@pytest.mark.parametrize("path", [".", "C:kb", "~/kb", "$ROOT/kb", "${ROOT}/kb", "%ROOT%/kb", "./*/kb", "https://host/kb"])
+def test_paths_reject_expansion_uri_and_glob(tmp_path: Path, path: str) -> None:
     with pytest.raises(ConfigError):
         parse_config(config_text(path), tmp_path / "project-knowledge.yaml")
+
+
+def test_paths_accept_parent_absolute_and_symlink_targets(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    outside = tmp_path / "outside"
+    project.mkdir()
+    outside.mkdir()
+    config = parse_config(config_text("../outside"), project / "project-knowledge.yaml")
+    assert Path(config["layers"][0]["resolved_path"]) == outside.resolve()
+    config = parse_config(config_text(str(outside)), project / "project-knowledge.yaml")
+    assert Path(config["layers"][0]["resolved_path"]) == outside.resolve()
+    link = project / "linked"
+    try:
+        link.symlink_to(outside, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"directory symlinks unavailable: {exc}")
+    config = parse_config(config_text("./linked"), project / "project-knowledge.yaml")
+    assert Path(config["layers"][0]["resolved_path"]) == outside.resolve()
+
+
+def test_unc_path_is_accepted_without_connecting(tmp_path: Path) -> None:
+    """UNCは利用時に到達可能である必要があるが、構文上は絶対パスとして解決する。"""
+    config = parse_config(config_text(r"\\server\share\knowledge"), tmp_path / "project-knowledge.yaml", resolve_symlinks=False)
+    assert Path(config["layers"][0]["resolved_path"]).is_absolute()
 
 
 def test_zero_and_multiple_layers(tmp_path: Path) -> None:
@@ -206,7 +230,7 @@ def test_failed_init_does_not_register(tmp_path: Path) -> None:
     assert snapshot(tmp_path) == before
 
 
-def test_external_symlink_is_rejected_before_initialization(tmp_path: Path) -> None:
+def test_external_symlink_is_initialized_and_registered(tmp_path: Path) -> None:
     project = tmp_path / "project"
     outside = tmp_path / "outside"
     project.mkdir()
@@ -216,9 +240,25 @@ def test_external_symlink_is_rejected_before_initialization(tmp_path: Path) -> N
         link.symlink_to(outside, target_is_directory=True)
     except OSError as exc:
         pytest.skip(f"directory symlinks unavailable: {exc}")
-    assert run("init_project.py", project).returncode == 2
-    assert list(outside.iterdir()) == []
-    assert not (project / "project-knowledge.yaml").exists()
+    config_path = project / "project-knowledge.yaml"
+    config_path.write_text(config_text("./project-knowledge", "read-write"), encoding="utf-8")
+    assert run("init_project.py", project).returncode == 0
+    assert (outside / "manifest.yml").is_file()
+    assert load_config(project)["layers"][0]["available"]
+
+
+def test_external_read_write_layer_supports_all_standard_operations(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    outside = tmp_path / "outside"
+    project.mkdir()
+    config_path = project / "project-knowledge.yaml"
+    config_path.write_text(config_text("../outside", "read-write"), encoding="utf-8")
+    assert run("init_project.py", project).returncode == 0
+    assert run("validate_knowledge.py", outside, "--project-root", project).returncode == 0
+    assert run("detect_changes.py", project, "--write-snapshot").returncode == 0
+    assert (outside / ".cache" / "source-snapshot.json").is_file()
+    assert run("policy_settings.py", outside / "knowledge-policy.md", "--project-root", project,
+               "--learning-mode", "manual").returncode == 0
 
 
 @pytest.mark.parametrize("key,value", [("access", "unknown"), ("optional", "false"), ("description", None), ("unknown", True)])

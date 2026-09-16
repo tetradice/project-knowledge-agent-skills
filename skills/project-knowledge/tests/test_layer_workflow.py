@@ -1,6 +1,7 @@
 """固定配置、情報保持、切替失敗時の復旧を実ファイルで検証する。"""
 
 import json
+import shutil
 import sys
 import subprocess
 from pathlib import Path
@@ -109,7 +110,7 @@ def test_normal_initialization_requires_fixed_content_plan(tmp_path: Path) -> No
 def test_split_preserves_claim_metadata_sources_and_shared_reference(tmp_path: Path) -> None:
     """移動後も本文・verified・根拠実体を保持し、再適用を冪等にする。"""
     root, docs = source_project(tmp_path)
-    before = workflow.validator.split_frontmatter((docs / "dev/run.md").read_text())[0]
+    before = workflow.validator.split_frontmatter((docs / "dev/run.md").read_text(encoding="utf-8"))[0]
     reference = (docs / "references/shared.md").read_bytes()
     original_config = (root / "project-knowledge.yaml").read_bytes()
     workflow.prepare_split(root, split_plan(tmp_path))
@@ -117,7 +118,7 @@ def test_split_preserves_claim_metadata_sources_and_shared_reference(tmp_path: P
     assert (root / "project-knowledge.yaml").read_bytes() == original_config
     workflow.apply_split(root)
     moved = root / "project-knowledge-dev/docs/operations/run.md"
-    metadata, body, _ = workflow.validator.split_frontmatter(moved.read_text())
+    metadata, body, _ = workflow.validator.split_frontmatter(moved.read_text(encoding="utf-8"))
     assert metadata["verified"] == before["verified"]
     assert metadata["generated"] == before["generated"]
     assert "Run claim." in body
@@ -131,6 +132,26 @@ def test_split_preserves_claim_metadata_sources_and_shared_reference(tmp_path: P
     before = workflow.inventory(root, config)
     workflow.apply_split(root)
     assert workflow.inventory(root, config) == before
+
+
+def test_split_supports_external_source_and_destination_layers(tmp_path: Path) -> None:
+    """外部レイヤー間でも候補、切替、登録を同じ操作記録で完了する。"""
+    root, _ = source_project(tmp_path)
+    source = tmp_path / "source-knowledge"
+    destination = tmp_path / "destination-knowledge"
+    shutil.move(str(root / "project-knowledge"), source)
+    (source / "app.txt").write_bytes((root / "app.txt").read_bytes())
+    config = root / "project-knowledge.yaml"
+    config.write_text(config.read_text(encoding="utf-8").replace("./project-knowledge", "../source-knowledge"), encoding="utf-8")
+    plan_path = split_plan(tmp_path)
+    plan = json.loads(plan_path.read_text())
+    plan["layers"][0]["path"] = "../destination-knowledge"
+    save_plan(plan_path, plan)
+    workflow.prepare_split(root, plan_path)
+    workflow.apply_split(root)
+    assert (destination / "docs/operations/run.md").is_file()
+    assert not (source / "docs/dev/run.md").exists()
+    assert [Path(item["resolved_path"]) for item in load_config(root)["layers"]] == [source.resolve(), destination.resolve()]
 
 
 def test_failed_switch_restores_untracked_files_and_can_resume(tmp_path: Path, monkeypatch) -> None:
@@ -169,7 +190,7 @@ def test_rejected_split_keeps_originals(tmp_path: Path, failure: str) -> None:
         plan["placements"][3]["path"] = "operations/unused/../run.md"
     elif failure == "readonly":
         config = root / "project-knowledge.yaml"
-        config.write_text(config.read_text().replace("access: read-write", "access: read-only").replace("write_target: default", "write_target: null"))
+        config.write_text(config.read_text(encoding="utf-8").replace("access: read-write", "access: read-only").replace("write_target: default", "write_target: null"), encoding="utf-8")
     elif failure == "external":
         (root / "README.md").write_text("[Run](project-knowledge/docs/dev/run.md)")
     elif failure == "missing":
@@ -200,16 +221,16 @@ def test_configuration_comments_and_readonly_new_layer(tmp_path: Path) -> None:
     """既存コメント・権限・明示nullを維持してread-only新規層を公開する。"""
     root, docs = source_project(tmp_path)
     config = root / "project-knowledge.yaml"
-    text = config.read_text().replace("layers:\n", "# layer comment\nlayers:\n").replace(
+    text = config.read_text(encoding="utf-8").replace("layers:\n", "# layer comment\nlayers:\n").replace(
         "write_target: default", "# target comment\nwrite_target: null # manual selection")
-    config.write_text(text)
+    config.write_text(text, encoding="utf-8")
     plan_path = split_plan(tmp_path)
     plan = json.loads(plan_path.read_text())
     plan["layers"][0]["access"] = "read-only"
     save_plan(plan_path, plan)
     workflow.prepare_split(root, plan_path)
     workflow.apply_split(root)
-    result = config.read_text()
+    result = config.read_text(encoding="utf-8")
     assert "# layer comment" in result and "# target comment" in result and "# manual selection" in result
     assert load_config(root)["write_target"] is None
     with pytest.raises(ConfigError, match="read-only"):
@@ -231,7 +252,7 @@ def test_retire_source_preserves_history(tmp_path: Path) -> None:
     workflow.prepare_split(root, plan_path)
     workflow.apply_split(root)
     assert [item["id"] for item in load_config(root)["layers"]] == ["dev"]
-    assert "Historical decision." in (root / "project-knowledge-dev/docs/log.md").read_text()
+    assert "Historical decision." in (root / "project-knowledge-dev/docs/log.md").read_text(encoding="utf-8")
     assert (root / "project-knowledge-dev/docs/product.md").exists()
 
 
@@ -275,7 +296,8 @@ def test_changed_evidence_or_candidate_blocks_switch(tmp_path: Path, change: str
     """根拠実体と準備済み候補の改変を適用前に検出する。"""
     root, docs = source_project(tmp_path)
     workflow.prepare_split(root, split_plan(tmp_path))
-    path = root / "app.txt" if change == "artifact" else root / workflow.WORK / "candidate/project-knowledge-dev/docs/operations/run.md"
+    path = root / "app.txt" if change == "artifact" else workflow.candidate_path(
+        root, workflow.operation_key(root / "project-knowledge-dev/docs/operations/run.md"))
     path.write_text("Changed input")
     with pytest.raises(ConfigError):
         workflow.apply_split(root)

@@ -119,17 +119,17 @@ def main() -> int:
                 destination.write_text(rendered, encoding="utf-8", newline="\n")
             else:
                 shutil.copyfile(TEMPLATES / template_name, destination)
-            changes.append(f"created: {destination.relative_to(project_root).as_posix()}")
+            changes.append(f"created: {display_path(project_root, destination)}")
 
     # 既存ignore設定を保持し、working copy固有stateだけを追加
     gitignore_path = knowledge_root / ".gitignore"
     if ensure_gitignore_entry(gitignore_path, "state.yml"):
-        changes.append(f"updated: {gitignore_path.relative_to(project_root).as_posix()}")
+        changes.append(f"updated: {display_path(project_root, gitignore_path)}")
 
     # 再構築可能なstateだけを対応schemaへ揃える
     state_path = knowledge_root / "state.yml"
     if ensure_state(state_path):
-        changes.append(f"rebuilt: {state_path.relative_to(project_root).as_posix()}")
+        changes.append(f"rebuilt: {display_path(project_root, state_path)}")
 
     # AGENTS.mdの管理ブロックを追加または最新版へ置換
     agents_path = project_root / "AGENTS.md"
@@ -140,7 +140,7 @@ def main() -> int:
     manifest = knowledge_root / "manifest.yml"
     if not manifest.exists():
         shutil.copyfile(TEMPLATES / "manifest.yml", manifest)
-        changes.append(f"created: {manifest.relative_to(project_root).as_posix()}")
+        changes.append(f"created: {display_path(project_root, manifest)}")
 
     # 初期構造が完成してから登録し、既存設定は変更しない
     if new_config and not args.prepare:
@@ -207,6 +207,12 @@ def ensure_gitignore_entry(path: Path, entry: str) -> bool:
     separator = "" if not current or current.endswith(("\n", "\r")) else "\n"
     path.write_text(f"{current}{separator}{entry}\n", encoding="utf-8")
     return True
+
+
+def display_path(project_root: Path, path: Path) -> str:
+    """プロジェクト内は相対、外部レイヤーは解決済み絶対パスで表示する。"""
+    resolved = path.resolve()
+    return resolved.relative_to(project_root).as_posix() if resolved.is_relative_to(project_root) else str(resolved)
 
 
 if __name__ == "__main__":
