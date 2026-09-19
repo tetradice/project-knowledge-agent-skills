@@ -78,7 +78,7 @@ Knowledgeには持続的な設計意図、制約、理由、仕様を求め、�
 
 ## offline HTMLの生成
 
-実行例は `uv run <skill>/scripts/build_offline_docs.py project-knowledge/published/markdown project-knowledge/published/html`。既存の非空出力先を置換する場合は事前承認を得てから`--force`を付ける。HTML生成処理をナレッジ生成へ混ぜない。
+実行例は `uv run <skill-root>/scripts/build_offline_docs.py <knowledge-root>/published/markdown <knowledge-root>/published/html`。`<skill-root>`と`<knowledge-root>`は[ルート設定](../../project-knowledge/references/project-config.md)の説明に従って実際のパスへ置き換える。既存の非空出力先を置換する場合は事前承認を得てから`--force`を付ける。HTML生成処理をナレッジ生成へ混ぜない。
 
 形式1.0だけをread-onlyで扱う。通常Conceptの分類、verified、status、staleを必要に応じて人間向けに表現し、Raw ReferenceはKnowledge分類の対象外とする。形式が異なる場合は生成せず、対応Skillの更新が必要と報告する。
 

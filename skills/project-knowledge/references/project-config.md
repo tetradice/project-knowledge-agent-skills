@@ -6,7 +6,9 @@ Project Knowledge操作は、プロジェクト直下の`project-knowledge.yaml`
 
 ## 実行手順
 
-明示されたプロジェクトルートでは`uv run <project-knowledge-skill>/scripts/project_config.py --project-root <project-root>`を実行する。
+この文書の`<skill-root>`は対象Skillのインストール先、`<project-root>`は操作対象プロジェクトのルートを表す。リポジトリをcloneして直接実行する場合は、`uv run ./skills/project-knowledge/scripts/project_config.py --project-root .`（PowerShellでは`uv run .\skills\project-knowledge\scripts\project_config.py --project-root .`）を使う。インストール済みSkillから実行する場合は、`<skill-root>`を実際のインストール先へ置き換える。
+
+明示されたプロジェクトルートでは`uv run <skill-root>/scripts/project_config.py --project-root <project-root>`を実行する。
 ルートが不明な場合は`--start <cwd> --workspace-root <workspace-root>`で探索する。
 Git管理下では最寄りのGit作業ツリールートを越えず、Git管理外でworkspaceが不明なら現在ディレクトリだけを調べる。
 最寄りの設定だけを使い、親子の設定をマージしない。
@@ -73,6 +75,6 @@ Policyの運用設定は各レイヤーの`knowledge-policy.md`に残す。
 ルート設定の表示や、明示依頼による`access`などの編集はレイヤー内の書き込みとは別操作である。
 ルート設定の編集では既存コメントと無関係な値を保持し、更新後に共通CLIで確認する。`version`を補完、昇格、修復しない。
 
-PolicyのCLIは`policy_settings.py <knowledge-root>/knowledge-policy.md --project-root <project-root>`、検査は`validate_knowledge.py <knowledge-root> --project-root <project-root>`を使う。
+PolicyのCLIは`uv run <skill-root>/scripts/policy_settings.py <knowledge-root>/knowledge-policy.md --project-root <project-root>`、検査は`uv run <skill-root>/scripts/validate_knowledge.py <knowledge-root> --project-root <project-root>`を使う。`<knowledge-root>`はこの手順で解決したレイヤーの`resolved_path`に置き換える。
 いずれも`--layer <id>`で対象を明示でき、渡したファイルやディレクトリと登録先の一致を確認する。
 検査CLIではmanifestの破損はfindingとして扱う。低水準の検査関数やPolicy編集関数は単体利用できるが、Skillは登録確認を省略しない。
