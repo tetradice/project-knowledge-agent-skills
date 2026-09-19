@@ -18,7 +18,7 @@ checks:
 `prepare`を実行する。
 
 ```console
-uv run --with pyyaml python <skill-root>/scripts/benchmark_runner.py prepare <repository> --task-file <task.md> --checks <checks.yml>
+uv run <skill-root>/scripts/benchmark_runner.py prepare <repository> --task-file <task.md> --checks <checks.yml>
 ```
 
 出力された`benchmark.json`だけがconditionとopaque workspaceの対応を保持する。
@@ -35,16 +35,16 @@ descriptorの`models.task`で2 Agentを同じturnに起動する。各Agentへ�
 各完了通知のsession IDとagent pathを記録する。
 
 ```console
-python <runner> session record <benchmark.json> task-a <session-id> --agent-path <path>
-python <runner> session record <benchmark.json> task-b <session-id> --agent-path <path>
+uv run <runner> session record <benchmark.json> task-a <session-id> --agent-path <path>
+uv run <runner> session record <benchmark.json> task-b <session-id> --agent-path <path>
 ```
 
 ## 3. 機械評価とblind snapshotを作る
 
 ```console
-python <runner> evaluate <benchmark.json> no_knowledge
-python <runner> evaluate <benchmark.json> with_knowledge
-python <runner> blind <benchmark.json>
+uv run <runner> evaluate <benchmark.json> no_knowledge
+uv run <runner> evaluate <benchmark.json> with_knowledge
+uv run <runner> blind <benchmark.json>
 ```
 
 `evaluate`はTask workspaceのdiffを保存し、使い捨て複製で同じchecksを実行する。`blind`はProject KnowledgeとGit情報を除外した`Candidate 1` / `Candidate 2`を作り、元worktree接続を復元する。
@@ -77,8 +77,8 @@ descriptorの`models.judge`と`fork_turns: none`でJudgeを起動する。task�
 Judge sessionを記録し、reportを生成する。
 
 ```console
-python <runner> session record <benchmark.json> judge <session-id> --agent-path <path>
-python <runner> report <benchmark.json>
+uv run <runner> session record <benchmark.json> judge <session-id> --agent-path <path>
+uv run <runner> report <benchmark.json>
 ```
 
 機械評価、Judge、usage/creditsを分離して報告し、run directoryと残した両workspaceをユーザーへ示す。

@@ -1,3 +1,8 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["PyYAML>=6.0,<7"]
+# ///
+
 """Project Knowledge有無の実務Task Benchmarkを準備・評価・集計する。"""
 
 from __future__ import annotations
