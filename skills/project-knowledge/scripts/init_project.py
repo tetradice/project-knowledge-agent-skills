@@ -47,8 +47,10 @@ def main() -> int:
         except (ConfigError, OSError, ValueError) as exc:
             print(f"Cannot initialize project-knowledge: {exc}", file=sys.stderr)
             return 2
-    if args.plan or args.empty:
-        parser.error("--plan and --empty require --layers")
+    if args.empty and not args.layers:
+        parser.error("--empty requires --layers; for a single-layer empty initialization, omit --empty and run init_project.py <project-root>")
+    if args.plan and not args.layers:
+        parser.error("--plan requires --layers")
     if (args.project_root.resolve() / ".project-knowledge.lock").exists():
         print("Knowledge operation in progress; resume or recover it first", file=sys.stderr)
         return 2

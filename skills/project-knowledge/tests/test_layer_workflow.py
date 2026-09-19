@@ -360,6 +360,25 @@ def test_cli_initialization_and_split_entrypoints(tmp_path: Path) -> None:
     assert not (docs / "dev/run.md").exists()
 
 
+def test_cli_empty_requires_layers_and_normal_init_stays_single_layer(tmp_path: Path) -> None:
+    """単一レイヤーの通常初期化と複数レイヤーの空登録の引数契約を固定する。"""
+    scripts = Path(__file__).resolve().parents[1] / "scripts"
+
+    normal_root = tmp_path / "normal"
+    result = subprocess.run([sys.executable, str(scripts / "init_project.py"), str(normal_root)],
+                            capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert (normal_root / "project-knowledge.yaml").is_file()
+
+    empty_root = tmp_path / "empty-without-layers"
+    result = subprocess.run([sys.executable, str(scripts / "init_project.py"), str(empty_root), "--empty"],
+                            capture_output=True, text=True)
+    assert result.returncode == 2
+    assert "--empty requires --layers" in result.stderr
+    assert "single-layer empty initialization" in result.stderr
+    assert not (empty_root / "project-knowledge.yaml").exists()
+
+
 def test_initialization_resumes_interrupted_skeleton_write(tmp_path: Path, monkeypatch) -> None:
     """骨組み保存直前に中断しても固定定義から不足分だけを補える。"""
     root = tmp_path / "project"

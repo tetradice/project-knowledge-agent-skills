@@ -14,7 +14,7 @@
 5. `uv run <skill-root>/scripts/init_project.py <project-root> --layers <layers.json> --plan <collection.json>`で配置・形式・参照・到達性を検査し、全対象が揃った後にルート設定を公開する。通常の`verify`を自動実行することではない。
 6. CLI結果で全レイヤーの解決、明示書込み選択と設定の一致を確認し、空の理由と分類件数を報告する。
 
-「空で初期化」の明示時だけ3・4を省略し、`--plan`の代わりに`--empty`を使う。`--prepare`なしでも実行できる。
+単一レイヤーを空で初期化する場合は、3・4を省略し、`--prepare`なしで通常の`uv run <skill-root>/scripts/init_project.py <project-root>`を1回実行する。複数レイヤーを空で登録する場合は、`uv run <skill-root>/scripts/init_project.py <project-root> --layers <layers.json> --empty`を実行する。`--empty`は`--layers`と併用し、単独では実行できない。
 新規`read-only`は未登録の間に依頼された初期内容を準備し、その権限で登録する。登録後に一時的に昇格しない。
 再開には同じ定義・配置表を使う。既存の生成済み内容は上書きしない。編集された内容は登録時に再検査する。
 
