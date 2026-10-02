@@ -13,6 +13,10 @@ sources:
   pk_source_type: change-implementation
 - resource: ../../../skills/project-knowledge/scripts/validate_knowledge.py
   pk_source_type: change-implementation
+- resource: ../references/user-statements/2026-10-02-non-git-change-detection.md
+  pk_source_type: user-statement
+- resource: ../references/interactions/2026-10-02-non-git-change-detection-implementation.md
+  pk_source_type: interaction-record
 ---
 # 再構築可能なProject Knowledge state
 
