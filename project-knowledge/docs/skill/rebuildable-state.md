@@ -23,8 +23,8 @@ state_schema_version: 2
 git_baseline_commit: null
 ```
 
-Git baselineは完全なcommit object IDとし、現在HEADの祖先である場合だけ使う。無効なら全tracked fileを対象とするフルスキャンへ移る。非Git環境は固定位置`project-knowledge/.cache/source-snapshot.json`のfile hashを使う。
+Git baselineは完全なcommit object IDとし、現在HEADの祖先である場合だけ使う。無効なら全tracked fileを対象とするフルスキャンへ移る。非Git環境では差分取得とfile hash計算を行わず、更新候補を空として扱う。
 
 Knowledge更新とvalidationが成功した後だけcheckpointを進める。validatorはstate問題をLowとしてKnowledge本体の破損と区別し、静的なschemaとfield型だけを検査する。
 
-`detect_changes.py`はstateのGit baselineまたは固定位置の非Git snapshotだけを使う。CLIでbaselineやsnapshot位置を上書きするoption、旧`--write-state` aliasは持たない。
+`detect_changes.py`はGit管理下でのみstateのGit baselineを使う。非Git環境では差分取得を行わず、`--write-snapshot`も後方互換のために受け付けるだけである。

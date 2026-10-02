@@ -4,21 +4,18 @@
 # dependencies = ["PyYAML>=6.0,<7"]
 # ///
 
-"""Gitまたはfile hashから更新候補を抽出する。"""
+"""Gitから更新候補を抽出する。非Git環境では差分を取得しない。"""
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import subprocess
 import sys
 from pathlib import Path
 
-from state import atomic_write_text, load_state, write_state
-from project_config import CONFIG_NAME, ConfigError, load_config, select_layer
-
-IGNORED_PARTS = {".git", ".cache", "published"}
+from project_config import ConfigError, load_config, select_layer
+from state import load_state, write_state
 
 
 def main() -> int:
@@ -28,7 +25,7 @@ def main() -> int:
     parser.add_argument(
         "--write-snapshot",
         action="store_true",
-        help="hash snapshotを保存する",
+        help="後方互換のため受け付けるが、非Git環境では何もしない",
     )
     parser.add_argument(
         "--write-baseline",
@@ -37,7 +34,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    # Gitが利用できればcommitと未コミット差分を統合
+    # Git管理下でcommitと未コミット差分を統合
     root = args.project_root.resolve()
     try:
         config = load_config(root)
@@ -72,15 +69,8 @@ def main() -> int:
         )
         return 0
 
-    # Gitがなければ内容hashのsnapshotと比較
-    snapshot_path = knowledge_root / ".cache" / "source-snapshot.json"
-    current = build_snapshot(root, snapshot_path, knowledge_root)
-    previous = load_snapshot(snapshot_path)
-    changed = sorted(path for path, digest in current.items() if previous.get(path) != digest)
-    removed = sorted(path for path in previous if path not in current)
-    if args.write_snapshot:
-        atomic_write_text(snapshot_path, json.dumps(current, indent=2) + "\n")
-    print(json.dumps({"mode": "hash", "changed": changed, "removed": removed}, ensure_ascii=False, indent=2))
+    # Git管理外では大容量ファイルを含む差分取得やhash計算を行わない
+    print(json.dumps({"mode": "non-git", "changed": [], "removed": []}, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -155,39 +145,6 @@ def git_changes(root: Path, baseline: str | None) -> list[str]:
         if result.returncode == 0:
             paths.update(line for line in result.stdout.splitlines() if line)
     return sorted(paths)
-
-
-def build_snapshot(root: Path, snapshot_path: Path | None = None, knowledge_root: Path | None = None) -> dict[str, str]:
-    """非Git差分検出用の現在snapshotを作る。"""
-
-    snapshot = {}
-    for path in sorted(item for item in root.rglob("*") if item.is_file()):
-        relative = path.relative_to(root)
-        if relative.as_posix() == CONFIG_NAME or (knowledge_root is not None and path.resolve().is_relative_to(knowledge_root)):
-            continue
-        if any(part in IGNORED_PARTS for part in relative.parts):
-            continue
-        if snapshot_path is not None and path.resolve() == snapshot_path.resolve():
-            continue
-        snapshot[relative.as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
-    return snapshot
-
-
-def load_snapshot(path: Path) -> dict[str, str]:
-    """壊れたsnapshotを空snapshotとして読み込む。"""
-
-    if not path.is_file():
-        return {}
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-        if not isinstance(value, dict) or any(
-            not isinstance(key, str) or not isinstance(digest, str)
-            for key, digest in value.items()
-        ):
-            return {}
-        return value
-    except (json.JSONDecodeError, OSError, UnicodeError):
-        return {}
 
 
 if __name__ == "__main__":

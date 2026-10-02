@@ -176,7 +176,7 @@ def test_custom_path_writes_and_null_target(tmp_path: Path) -> None:
     root = tmp_path / "knowledge" / "team"
     assert run("validate_knowledge.py", root, "--project-root", tmp_path).returncode == 0
     assert run("detect_changes.py", tmp_path, "--write-snapshot").returncode == 0
-    assert (root / ".cache" / "source-snapshot.json").is_file()
+    assert not (root / ".cache" / "source-snapshot.json").exists()
     file.write_text(file.read_text(encoding="utf-8") + "write_target: null\n", encoding="utf-8")
     before = snapshot(tmp_path)
     assert run("detect_changes.py", tmp_path, "--write-snapshot").returncode == 2
@@ -256,7 +256,7 @@ def test_external_read_write_layer_supports_all_standard_operations(tmp_path: Pa
     assert run("init_project.py", project).returncode == 0
     assert run("validate_knowledge.py", outside, "--project-root", project).returncode == 0
     assert run("detect_changes.py", project, "--write-snapshot").returncode == 0
-    assert (outside / ".cache" / "source-snapshot.json").is_file()
+    assert not (outside / ".cache" / "source-snapshot.json").exists()
     assert run("policy_settings.py", outside / "knowledge-policy.md", "--project-root", project,
                "--learning-mode", "manual").returncode == 0
 

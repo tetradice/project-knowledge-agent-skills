@@ -112,11 +112,11 @@ Knowledge Baseは各プロジェクトの`project-knowledge/`に置きます。
 | `knowledge-policy.md` | Knowledgeをどう育てるか。frontmatterに運用設定、本文にSkill同梱の標準Policyへの参照と任意のプロジェクト固有方針を持つ |
 | `state.yml` | 増分更新用の再構築可能なworking copy固有状態。Knowledgeの正本ではなく通常はcommitしない |
 | `published/` | Knowledgeから再生成した公開成果物 |
-| `.cache/` | 非Git環境のhash snapshotなど、再生成できるworking copy固有データ |
+| `.cache/` | 再生成できるworking copy固有データ。Git管理外の差分検出には使用しない |
 
 `index.md`は案内とリンクだけを持つナビゲーション専用ページです。
 
-`state.yml`は`state_schema_version`と`git_baseline_commit`を持ちます。Git baselineは完全object IDで保存し、利用時にcommitとして解決でき、現在HEADの祖先であることを確認します。無効なら全tracked fileのフルスキャンへ戻ります。Knowledge本文・index・logの更新とvalidationがすべて成功した後だけbaselineを進めます。staged、working tree、untrackedはcheckpointしないため、commitされるまで再検出され得ます。非Git環境では`project-knowledge/.cache/source-snapshot.json`を使い、欠落・破損時は空snapshotから再生成します。
+`state.yml`は`state_schema_version`と`git_baseline_commit`を持ちます。Git baselineは完全object IDで保存し、利用時にcommitとして解決でき、現在HEADの祖先であることを確認します。無効なら全tracked fileのフルスキャンへ戻ります。Knowledge本文・index・logの更新とvalidationがすべて成功した後だけbaselineを進めます。staged、working tree、untrackedはcheckpointしないため、commitされるまで再検出され得ます。非Git環境では差分取得とfile hash計算を行わず、更新候補は空として扱います。
 単独で再利用できる事実、判断、制約、状態、検証結果は、frontmatter付きのConceptへ分離します。
 人間の原文はUser Statement、作業経緯はInteraction Record、外部文書や既存資料はReferenceとして、必要な場合だけ根拠側に残します。
 

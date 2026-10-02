@@ -1,6 +1,6 @@
 # Rebuildable state
 
-保存先はルート設定で解決したレイヤー内とする。読み取り専用レイヤーではstateとsnapshotも書き込まない。読み取り時の欠落や破損はメモリ内で扱い、フルスキャンへ戻す。
+保存先はルート設定で解決したレイヤー内とする。読み取り専用レイヤーではstateを書き込まない。Git管理外では差分取得とsnapshotの読み書きを行わない。
 
 `state.yml`はProject Knowledgeの正本ではなく、増分更新を効率化するための再構築可能な機械状態を保持する。Knowledge本文、index、log、manifest、Policyの内容をstateから推測して変更してはならない。
 
@@ -9,7 +9,7 @@ state_schema_version: 2
 git_baseline_commit: null
 ```
 
-`state.yml`と`.cache/`はworking copy固有のローカル状態であり、通常はGitへcommitしない。削除、破損、非対応schemaを検出した場合は現在のproject状態から再構築する。復旧できないstateを理由にupdateを停止せず、可能ならフルスキャンへフォールバックする。
+`state.yml`と`.cache/`はworking copy固有のローカル状態であり、通常はGitへcommitしない。削除、破損、非対応schemaを検出した場合は現在のproject状態から再構築する。復旧できないstateを理由にupdateを停止せず、Git管理下では可能ならフルスキャンへフォールバックする。
 
 ## Schema 2
 
@@ -28,15 +28,7 @@ Knowledge本文、index、logの更新とvalidationがすべて成功した後�
 
 ## Non-Git mode
 
-標準snapshot位置は、設定で解決したレイヤー内の次の位置とする。
-
-```text
-<resolved-knowledge-root>/.cache/source-snapshot.json
-```
-
-現在のfile hashが前回値と異なる、または前回値がなければ`changed`、前回snapshotだけに存在すれば`removed`とする。snapshotがない、JSONとして壊れている、想定するstring-to-string mappingでない場合は空snapshotとしてフルスキャンする。
-
-Knowledge更新とvalidationが成功した後だけ、`--write-snapshot`で標準位置へ現在hashを保存する。
+Git管理外では、大容量ファイルを含む差分取得、file hash計算、snapshotの読み書きを行わない。`detect_changes.py`は`mode: "non-git"`と空の`changed`・`removed`を返して終了する。`--write-snapshot`は後方互換のため受け付けるが、何もしない。
 
 ## Recovery
 
@@ -44,7 +36,7 @@ Knowledge更新とvalidationが成功した後だけ、`--write-snapshot`で標�
 
 stateの再生成はKnowledge本文を変更せず、履歴の保持だけを理由に失敗させない。
 
-stateとsnapshotは、一時ファイルを同じdirectoryへ書き、完了後にreplaceする。再構築可能性を超えるtransaction機構は設けない。
+stateは一時ファイルを同じdirectoryへ書き、完了後にreplaceする。再構築可能性を超えるtransaction機構は設けない。
 
 ## Validation boundary
 

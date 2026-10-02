@@ -678,36 +678,18 @@ def test_detect_changes_without_git(tmp_path: Path) -> None:
     source.write_text("one", encoding="utf-8")
     snapshot = tmp_path / "project-knowledge" / ".cache" / "source-snapshot.json"
 
-    # snapshot更新は明示時だけ行う
+    # 非Git環境では差分取得もsnapshot更新も行わない
     first = run_script("detect_changes.py", tmp_path)
-    assert json.loads(first.stdout)["changed"] == ["app.txt"]
+    assert json.loads(first.stdout) == {"mode": "non-git", "changed": [], "removed": []}
     assert not snapshot.exists()
 
     written = run_script("detect_changes.py", tmp_path, "--write-snapshot")
     assert written.returncode == 0
+    assert json.loads(written.stdout) == {"mode": "non-git", "changed": [], "removed": []}
+    assert not snapshot.exists()
     source.write_text("two", encoding="utf-8")
     changed = run_script("detect_changes.py", tmp_path)
-    assert json.loads(changed.stdout)["changed"] == ["app.txt"]
-
-
-@pytest.mark.parametrize("snapshot_content", (b"{broken", b"[]", b"\x80"))
-def test_detect_changes_rebuilds_malformed_snapshot(
-    tmp_path: Path,
-    snapshot_content: bytes,
-) -> None:
-    source = tmp_path / "app.txt"
-    source.write_text("one", encoding="utf-8")
-    snapshot = tmp_path / "project-knowledge" / ".cache" / "source-snapshot.json"
-    snapshot.parent.mkdir(parents=True)
-    snapshot.write_bytes(snapshot_content)
-
-    # 壊れたcacheは空snapshotとして扱い、Knowledge本文には触れない
-    result = run_script("detect_changes.py", tmp_path, "--write-snapshot")
-    payload = json.loads(result.stdout)
-
-    assert result.returncode == 0
-    assert payload["changed"] == ["app.txt"]
-    assert json.loads(snapshot.read_text(encoding="utf-8"))["app.txt"]
+    assert json.loads(changed.stdout) == {"mode": "non-git", "changed": [], "removed": []}
 
 
 def test_detect_changes_with_git(tmp_path: Path) -> None:
